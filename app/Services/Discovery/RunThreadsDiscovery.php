@@ -2,23 +2,23 @@
 
 namespace App\Services\Discovery;
 
+use App\Models\DiscoveredPost;
+use App\Models\Lead;
 use App\Models\SocialAccount;
 use App\Services\Social\Threads\ThreadsSearchService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
 class RunThreadsDiscovery
 {
-    public function __construct(
-        private readonly ThreadsSearchService $threads,
-    ) {}
+    public function __construct(private readonly ThreadsSearchService $threads) {}
 
-    public function execute(
-        SocialAccount $account,
-        object $keyword,
-    ): array {
+    /** @return array{fetched: int, linked: int, added: int} */
+    public function execute(SocialAccount $account, object $keyword): array
+    {
         $runId = DB::table('discovery_runs')->insertGetId([
             'social_account_id' => $account->id,
             'search_keyword_id' => $keyword->id,
@@ -28,149 +28,105 @@ class RunThreadsDiscovery
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $stage = 'search';
+        $fetched = 0;
 
         try {
-            // Request HTTP dilakukan di luar transaksi database.
-            $posts = $this->threads->search(
-                $account,
-                $keyword->phrase,
-                $keyword->search_type,
-                25,
-            );
+            $posts = $this->threads->search($account, $keyword->phrase, $keyword->search_type, 25);
+            $fetched = count($posts);
+            $stage = 'persistence';
 
-            $stats = DB::transaction(
-                function () use ($posts, $runId, $keyword): array {
-                    $added = 0;
-                    $linked = 0;
+            return DB::transaction(function () use ($posts, $runId, $keyword, $fetched): array {
+                $added = 0;
+                $linked = [];
 
-                    foreach ($posts as $post) {
-                        $externalId = (string) $post['id'];
-
-                        $postedAt = null;
-
-                        if (filled($post['timestamp'] ?? null)) {
-                            try {
-                                $postedAt = Carbon::parse(
-                                    $post['timestamp']
-                                );
-                            } catch (Throwable) {
-                                $postedAt = null;
-                            }
-                        }
-
-                        $body = is_string($post['text'] ?? null)
-                            ? $post['text']
-                            : null;
-
-                        $postId = DB::table('discovered_posts')
-                            ->where('platform', 'threads')
-                            ->where('external_post_id', $externalId)
-                            ->value('id');
-
-                        if ($postId === null) {
-                            // Unique index mencegah duplikasi
-                            // antar-run secara database-level.
-                            DB::table('discovered_posts')
-                                ->insertOrIgnore([
-                                    'platform' => 'threads',
-                                    'external_post_id' => $externalId,
-                                    'username' => $post['username'] ?? null,
-                                    'body' => $body,
-                                    'permalink' => $post['permalink'] ?? null,
-                                    'posted_at' => $postedAt,
-                                    'first_discovered_at' => now(),
-                                    'last_seen_at' => now(),
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ]);
-
-                            $postId = DB::table('discovered_posts')
-                                ->where('platform', 'threads')
-                                ->where('external_post_id', $externalId)
-                                ->value('id');
-                        }
-
-                        if ($postId === null) {
-                            continue;
-                        }
-
-                        DB::table('discovered_posts')
-                            ->where('id', $postId)
-                            ->update([
-                                'last_seen_at' => now(),
-                                'updated_at' => now(),
-                            ]);
-
-                        DB::table('discovery_run_posts')
-                            ->insertOrIgnore([
-                                'discovery_run_id' => $runId,
-                                'discovered_post_id' => $postId,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]);
-
-                        $linked++;
-
-                        // Hanya post dengan isi teks yang dapat
-                        // dibuat menjadi lead untuk analisis AI.
-                        if (filled(trim((string) $body))) {
-                            $inserted = DB::table('leads')
-                                ->insertOrIgnore([
-                                    'discovered_post_id' => $postId,
-                                    'intent' => 'unclassified',
-                                    'priority' => 'unscored',
-                                    'status' => 'new',
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ]);
-
-                            if ($inserted > 0) {
-                                $added++;
-                            }
+                foreach ($posts as $post) {
+                    $postedAt = null;
+                    if (filled($post['timestamp'] ?? null)) {
+                        try {
+                            $postedAt = Carbon::parse($post['timestamp']);
+                        } catch (Throwable) {
+                            $postedAt = null;
                         }
                     }
 
-                    DB::table('search_keywords')
-                        ->where('id', $keyword->id)
-                        ->update([
-                            'last_ran_at' => now(),
+                    $body = is_string($post['text'] ?? null) ? $post['text'] : null;
+                    $storedPost = DiscoveredPost::query()->firstOrCreate([
+                        'platform' => 'threads',
+                        'external_post_id' => (string) $post['id'],
+                    ], [
+                        'username' => $post['username'] ?? null,
+                        'body' => $body,
+                        'permalink' => $post['permalink'] ?? null,
+                        'posted_at' => $postedAt,
+                        'first_discovered_at' => now(),
+                        'last_seen_at' => now(),
+                    ]);
+                    $storedPost->update(['last_seen_at' => now()]);
+
+                    if (! isset($linked[$storedPost->id])) {
+                        DB::table('discovery_run_posts')->insert([
+                            'discovery_run_id' => $runId,
+                            'discovered_post_id' => $storedPost->id,
+                            'created_at' => now(),
                             'updated_at' => now(),
                         ]);
+                        $linked[$storedPost->id] = true;
+                    }
 
-                    return [
-                        'fetched' => count($posts),
-                        'linked' => $linked,
-                        'added' => $added,
-                    ];
+                    if (filled(trim((string) $storedPost->body))) {
+                        $lead = Lead::query()->firstOrCreate([
+                            'discovered_post_id' => $storedPost->id,
+                        ], [
+                            'intent' => 'unclassified',
+                            'priority' => 'unscored',
+                            'status' => 'new',
+                        ]);
+                        $added += (int) $lead->wasRecentlyCreated;
+                    }
                 }
-            );
 
-            DB::table('discovery_runs')
-                ->where('id', $runId)
-                ->update([
+                DB::table('search_keywords')->where('id', $keyword->id)->update([
+                    'last_ran_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                DB::table('discovery_runs')->where('id', $runId)->update([
                     'status' => 'completed',
-                    'fetched_count' => $stats['fetched'],
-                    'added_count' => $stats['added'],
-                    // AI belum dijalankan: jangan
-                    // mengarang relevant_count.
+                    'fetched_count' => $fetched,
+                    'added_count' => $added,
                     'relevant_count' => 0,
                     'finished_at' => now(),
                     'updated_at' => now(),
                 ]);
 
-            return $stats;
+                return ['fetched' => $fetched, 'linked' => count($linked), 'added' => $added];
+            });
         } catch (Throwable $exception) {
-            DB::table('discovery_runs')
-                ->where('id', $runId)
-                ->update([
+            Log::error('Threads discovery run failed', [
+                'run_id' => $runId,
+                'stage' => $stage,
+                'search_type' => $keyword->search_type,
+                'fetched_count' => $fetched,
+                'exception_type' => $exception::class,
+            ]);
+
+            try {
+                DB::table('discovery_runs')->where('id', $runId)->update([
                     'status' => 'failed',
-                    'error_code' => 'DISCOVERY_FAILED',
-                    'error_summary' =>
-                    'Pencarian gagal. Periksa izin API, '
-                        . 'token, dan log aplikasi.',
+                    'fetched_count' => $fetched,
+                    'error_code' => $stage === 'search' ? 'THREADS_SEARCH_FAILED' : 'DISCOVERY_STORAGE_FAILED',
+                    'error_summary' => $stage === 'search'
+                        ? 'Pencarian Threads gagal. Periksa koneksi, token, izin API, atau batas request.'
+                        : 'Penyimpanan gagal; perubahan postingan dan lead dibatalkan.',
                     'finished_at' => now(),
                     'updated_at' => now(),
                 ]);
+            } catch (Throwable $statusException) {
+                Log::error('Threads discovery failure status unavailable', [
+                    'run_id' => $runId,
+                    'exception_type' => $statusException::class,
+                ]);
+            }
 
             throw $exception;
         }

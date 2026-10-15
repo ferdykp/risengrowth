@@ -4,6 +4,7 @@ namespace App\Services\Social\Threads;
 
 use App\Models\SocialAccount;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class ThreadsSearchService
@@ -46,27 +47,26 @@ class ThreadsSearchService
             ->acceptJson()
             ->connectTimeout(10)
             ->timeout(30)
-            ->get($baseUrl . '/keyword_search', [
+            ->get($baseUrl.'/keyword_search', [
                 'q' => $keyword,
                 'search_type' => $searchType,
                 'fields' => 'id,text,username,permalink,timestamp',
                 'limit' => min(max($limit, 1), 100),
             ]);
 
-        if ($response->failed()) {
-            $code = $response->json('error.code')
-                ?? $response->status();
-
-            // Jangan sertakan body response atau token
-            // dalam exception/log.
-            throw new RuntimeException(
-                'Threads API menolak pencarian. Kode: ' . $code
-            );
+        if (! $response->successful() || $response->json('error') !== null) {
+            $code = $response->json('error.code');
+            Log::warning('Threads search rejected', [
+                'account_id' => $account->id,
+                'http_status' => $response->status(),
+                'api_code' => is_int($code) ? $code : null,
+            ]);
+            throw new RuntimeException('Threads API menolak pencarian.');
         }
 
         $posts = $response->json('data');
 
-        if (! is_array($posts)) {
+        if (! is_array($posts) || ! array_is_list($posts)) {
             throw new RuntimeException(
                 'Format hasil pencarian Threads tidak valid.'
             );
@@ -74,8 +74,9 @@ class ThreadsSearchService
 
         return array_values(array_filter(
             $posts,
-            fn($post) => is_array($post)
-                && filled($post['id'] ?? null)
+            fn ($post) => is_array($post)
+                && (is_string($post['id'] ?? null) || is_int($post['id'] ?? null))
+                && filled(trim((string) $post['id']))
         ));
     }
 }
