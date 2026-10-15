@@ -12,6 +12,7 @@ use App\Http\Controllers\ReviewQueueController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\InitialPasswordController;
 use App\Http\Controllers\Integrations\ThreadsConnectionController;
 
@@ -68,6 +69,9 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
     Route::patch('/settings/profile', [SettingsController::class, 'profile'])->middleware('throttle:account-mutations')->name('settings.profile');
     Route::patch('/settings/preferences', [SettingsController::class, 'preferences'])->middleware('throttle:account-mutations')->name('settings.preferences');
 
+    Route::post('/discovery/run', DiscoveryRunController::class)
+        ->middleware(['admin', 'throttle:6,1'])
+        ->name('discovery.run');
 
     Route::middleware('admin')->group(function () {
         Route::post(

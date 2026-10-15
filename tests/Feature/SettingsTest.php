@@ -17,8 +17,16 @@ class SettingsTest extends TestCase
 
     public function test_authenticated_user_can_view_settings(): void
     {
-        $this->actingAs(User::factory()->create())
-            ->get('/settings')->assertOk()->assertSee('Pengaturan')->assertSee('Belum ada akun terhubung');
+        $member = User::factory()->create([
+            'role' => 'member',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($member)
+            ->get(route('settings.index'))
+            ->assertOk()
+            ->assertSee('Pengaturan')
+            ->assertSee('Integrasi dikelola oleh Administrator.');
     }
 
     public function test_user_can_save_preferences_without_enabling_discovery(): void
