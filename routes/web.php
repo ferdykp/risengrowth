@@ -13,6 +13,7 @@ use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\InitialPasswordController;
+use App\Http\Controllers\Integrations\ThreadsConnectionController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [InternalAuthController::class, 'show'])->name('login');
@@ -66,4 +67,27 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::patch('/settings/profile', [SettingsController::class, 'profile'])->middleware('throttle:account-mutations')->name('settings.profile');
     Route::patch('/settings/preferences', [SettingsController::class, 'preferences'])->middleware('throttle:account-mutations')->name('settings.preferences');
+
+
+    Route::middleware('admin')->group(function () {
+        Route::post(
+            '/auth/threads/connect',
+            [ThreadsConnectionController::class, 'connect']
+        )
+            ->middleware('throttle:6,1')
+            ->name('threads.connect');
+
+        Route::get(
+            '/auth/threads/callback',
+            [ThreadsConnectionController::class, 'callback']
+        )
+            ->name('threads.callback');
+
+        Route::delete(
+            '/auth/threads/{account}',
+            [ThreadsConnectionController::class, 'disconnect']
+        )
+            ->middleware('throttle:6,1')
+            ->name('threads.disconnect');
+    });
 });

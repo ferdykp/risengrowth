@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Models\SocialAccount;
 
 class SettingsController extends Controller
 {
@@ -19,9 +20,18 @@ class SettingsController extends Controller
             'discovery_interval_minutes' => 60,
             'notify_on_new_leads' => true,
         ]);
-        $accounts = DB::table('social_accounts')->where('user_id', $user->id)
-            ->select('id', 'platform', 'username', 'status', 'token_expires_at', 'last_verified_at')
-            ->orderBy('platform')->get();
+
+        $accounts = $user->role === 'admin'
+            ? SocialAccount::query()
+            ->where('platform', 'threads')
+            ->orderByDesc('created_at')
+            ->get()
+            : collect();
+
+        $threadsConfigured =
+            filled(config('services.threads.app_id'))
+            && filled(config('services.threads.app_secret'))
+            && filled(config('services.threads.redirect_uri'));
 
         return view('settings.index', [
             'user' => $user,
@@ -29,6 +39,8 @@ class SettingsController extends Controller
             'accounts' => $accounts,
             'groqConfigured' => filled(config('services.groq.key')),
             'groqModel' => config('services.groq.model'),
+            'threadsConfigured' => $threadsConfigured,
+            'isAdmin' => $user->role === 'admin',
         ]);
     }
 

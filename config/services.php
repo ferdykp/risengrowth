@@ -39,4 +39,23 @@ return [
         'key' => env('GROQ_API_KEY'),
         'model' => env('GROQ_MODEL', 'openai/gpt-oss-20b'),
     ],
+
+
+    'threads' => [
+        'app_id' => env('THREADS_APP_ID'),
+        'app_secret' => env('THREADS_APP_SECRET'),
+        'redirect_uri' => env(
+            'THREADS_REDIRECT_URI',
+            'https://growth.risencode.dev/auth/threads/callback'
+        ),
+        'api_base_url' => env(
+            'THREADS_API_BASE_URL',
+            'https://graph.threads.net'
+        ),
+        'scopes' => [
+            'threads_basic',
+            'threads_keyword_search',
+        ],
+    ],
+
 ];
