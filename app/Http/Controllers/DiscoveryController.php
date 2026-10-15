@@ -16,9 +16,20 @@ class DiscoveryController extends Controller
             'keyword' => ['nullable', 'integer', 'min:1'],
         ]);
 
+
+
         $accounts = DB::table('social_accounts')
-            ->select('id', 'platform', 'username', 'status', 'last_verified_at')
-            ->orderBy('platform')->get();
+            ->select([
+                'id',
+                'platform',
+                'username',
+                'status',
+                'token_expires_at',
+                'last_verified_at',
+            ])
+            ->orderBy('platform')
+            ->get();
+
 
         $keywords = DB::table('search_keywords')
             ->whereNull('deleted_at')->orderBy('phrase')->get();

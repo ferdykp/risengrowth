@@ -18,15 +18,35 @@ class DiscoveryTest extends TestCase
         $this->actingAs(User::factory()->create());
     }
 
+
     public function test_empty_discovery_page_is_rendered(): void
     {
-        $this->actingAs(User::factory()->create())
+        $member = User::factory()->create();
+
+        $this->actingAs($member)
             ->get(route('discovery.index'))
             ->assertOk()
             ->assertSee('Eksplorasi Prospek')
             ->assertSee('Belum ada riwayat pencarian')
-            ->assertSee('Jalankan Pencarian');
+            ->assertSee('Pencarian dikelola Administrator')
+            ->assertDontSee('Jalankan Pencarian');
     }
+
+    public function test_admin_can_see_discovery_search_form(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get(route('discovery.index'))
+            ->assertOk()
+            ->assertSee('Eksplorasi Prospek')
+            ->assertSee('Jalankan Pencarian')
+            ->assertSee(
+                'action="' . route('discovery.run') . '"',
+                false
+            );
+    }
+
 
 
     public function test_invalid_status_filter_is_rejected(): void
