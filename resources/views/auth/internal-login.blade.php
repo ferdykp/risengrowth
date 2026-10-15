@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Masuk · RisenGrowth</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="min-h-screen bg-[#fbf8ff] flex items-center justify-center p-5 font-sans text-slate-900"><main class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"><a href="{{ route('login') }}" class="font-bold text-xl">RisenGrowth<span class="text-blue-600">.</span></a><h1 class="text-3xl font-semibold tracking-tight mt-8">Masuk ke workspace</h1><p class="text-sm text-slate-500 mt-2 mb-8">Akses khusus tim internal RisenGrowth.</p>
+@if(session('status'))<p role="status" class="mb-4 p-3 rounded-lg bg-green-50 text-green-700 text-sm">{{ session('status') }}</p>@endif
+<form action="{{ route('login.submit') }}" method="post" class="space-y-5">@csrf
+<div><label for="email" class="block text-sm font-medium mb-2">Email</label><input id="email" type="email" name="email" autocomplete="username" required value="{{ old('email') }}" class="w-full rounded-xl border border-slate-300 p-3 focus:ring-2 focus:ring-blue-600 outline-none" autofocus></div>
+<div><label for="password" class="block text-sm font-medium mb-2">Kata sandi</label><input id="password" type="password" name="password" autocomplete="current-password" required class="w-full rounded-xl border border-slate-300 p-3 focus:ring-2 focus:ring-blue-600 outline-none"></div>
+<div class="flex items-center justify-between gap-3 text-sm"><label class="flex items-center gap-2"><input type="checkbox" name="remember" value="1"> Ingat saya</label><a class="text-blue-700 hover:underline" href="{{ route('password.request') }}">Lupa kata sandi?</a></div>
+@error('email')<p class="text-sm text-red-600" role="alert">{{ $message }}</p>@enderror
+<button type="submit" class="w-full bg-slate-950 text-white rounded-xl p-3 font-semibold hover:bg-slate-800">Masuk</button></form></main></body></html>
