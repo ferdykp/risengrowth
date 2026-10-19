@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\RunPythonDiscoveryJob;
 use App\Models\SocialAccount;
 use App\Services\Discovery\RunThreadsDiscovery;
 use Illuminate\Http\RedirectResponse;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -32,6 +34,7 @@ class DiscoveryRunController extends Controller
         );
 
         $data = $request->validate([
+            'source' => ['nullable', Rule::in(['python', 'threads'])],
             'keyword_id' => [
                 'required',
                 'integer',
@@ -53,8 +56,7 @@ class DiscoveryRunController extends Controller
             ]);
 
             throw ValidationException::withMessages([
-                'keyword_id' =>
-                'Keyword tidak ditemukan atau belum aktif.',
+                'keyword_id' => 'Keyword tidak ditemukan atau belum aktif.',
             ]);
         }
 
@@ -62,6 +64,12 @@ class DiscoveryRunController extends Controller
             'keyword_id' => $keyword->id,
             'search_type' => $keyword->search_type,
         ]);
+
+        if (($data['source'] ?? 'threads') === 'python') {
+            RunPythonDiscoveryJob::dispatch($keyword->id);
+
+            return redirect()->route('discovery.index')->with('success', 'Discovery masuk antrean. Periksa riwayat setelah worker berjalan.');
+        }
 
         // STEP 4: Pilih akun Threads dari shared workspace.
         $account = SocialAccount::query()
@@ -85,8 +93,7 @@ class DiscoveryRunController extends Controller
             ]);
 
             throw ValidationException::withMessages([
-                'keyword_id' =>
-                'Akun Threads tidak aktif. Hubungkan ulang melalui Settings.',
+                'keyword_id' => 'Akun Threads tidak aktif. Hubungkan ulang melalui Settings.',
             ]);
         }
 
@@ -113,8 +120,7 @@ class DiscoveryRunController extends Controller
             return redirect()
                 ->route('discovery.index')
                 ->withErrors([
-                    'discovery' =>
-                    'Pencarian keyword ini sedang diproses. Coba lagi sebentar.',
+                    'discovery' => 'Pencarian keyword ini sedang diproses. Coba lagi sebentar.',
                 ]);
         }
 
@@ -160,8 +166,7 @@ class DiscoveryRunController extends Controller
             return redirect()
                 ->route('discovery.index')
                 ->withErrors([
-                    'discovery' =>
-                    'Pencarian gagal diproses. Periksa riwayat dan log Discovery di server.',
+                    'discovery' => 'Pencarian gagal diproses. Periksa riwayat dan log Discovery di server.',
                 ]);
         } finally {
             $lock->release();

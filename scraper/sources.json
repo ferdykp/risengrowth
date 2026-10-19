@@ -1,0 +1,29 @@
+{
+  "sources": [
+    {
+      "id": "quotes-demo",
+      "platform": "web",
+      "enabled": false,
+      "mode": "http",
+      "url": "https://quotes.toscrape.com/",
+      "item_selector": ".quote",
+      "text_selector": ".text",
+      "author_selector": ".author",
+      "link_selector": "a[href]",
+      "max_pages": 1,
+      "permission_note": "Website explicitly intended for scraping practice. Replace/add only permitted targets."
+    },
+    {
+      "id": "hackernews-official",
+      "platform": "web",
+      "enabled": true,
+      "mode": "hackernews",
+      "feeds": [
+        "askstories",
+        "newstories"
+      ],
+      "max_items": 60,
+      "permission_note": "Official public Hacker News Firebase API; recent stories only, not Threads or full-text search."
+    }
+  ]
+}

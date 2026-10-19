@@ -25,7 +25,7 @@
                         <div class="border-t border-slate-100 mt-7 pt-4 text-xs text-slate-500">Ditemukan: {{ $lead->post->first_discovered_at?->format('d M Y, H:i') ?? $lead->post->created_at?->format('d M Y, H:i') }}</div>
                     </section>
                     <section class="bg-white rounded-2xl border border-slate-200 p-5 md:p-7 space-y-5">
-                        <div><h2 class="text-lg font-bold">Analisis AI</h2><p class="text-xs text-slate-500 mt-1">Hasil analisis yang telah tersimpan untuk postingan ini.</p></div>
+                        <div><h2 class="text-lg font-bold">Kualifikasi prospek</h2><p class="text-xs text-slate-500 mt-1">Hasil analisis yang telah tersimpan untuk postingan ini.</p></div>
                         @if($lead->score === null && $lead->post->analyses->isEmpty())
                             <div class="py-9 text-center border border-dashed border-slate-200 rounded-xl"><span class="material-symbols-outlined text-4xl text-slate-300">psychology</span><h3 class="font-semibold mt-2">Belum dianalisis</h3><p class="text-sm text-slate-500 mt-2 max-w-md mx-auto">Analisis AI baru akan tersedia setelah integrasi provider dan proses scoring diaktifkan.</p></div>
                         @else
@@ -39,13 +39,19 @@
                     </section>
                     <section class="bg-white rounded-2xl border border-slate-200 p-5 md:p-7">
                         <h2 class="text-lg font-bold">Catatan internal</h2><p class="text-sm text-slate-500 mt-3 whitespace-pre-wrap">{{ $lead->operator_notes ?: 'Belum ada catatan internal untuk prospek ini.' }}</p>
-                        <p class="text-xs text-slate-400 mt-3">Pengeditan catatan akan tersedia pada tahap manajemen prospek.</p>
+                        <p class="text-xs text-slate-400 mt-3">Catatan dapat diedit melalui formulir status prospek.</p>
                     </section>
                 </div>
                 <div class="xl:col-span-4 space-y-5 min-w-0">
                     <section class="bg-white rounded-2xl border border-slate-200 p-5">
-                        <h2 class="font-bold">Status Prospek</h2><div class="mt-4 flex justify-between items-center text-sm"><span class="text-slate-500">Status</span><span class="font-semibold">{{ ['new'=>'Baru','reviewing'=>'Ditinjau','qualified'=>'Potensial','contacted'=>'Dihubungi','converted'=>'Konversi','dismissed'=>'Diabaikan'][$lead->status] ?? $lead->status }}</span></div><div class="mt-3 flex justify-between items-center text-sm"><span class="text-slate-500">Skor AI</span><span class="font-semibold">{{ $lead->score === null ? 'Belum dinilai' : $lead->score.'/100' }}</span></div>
-                        <div class="mt-5 pt-4 border-t border-slate-100"><p class="text-xs text-slate-500">Tindakan yang mengubah status akan ditambahkan bersama validasi dan audit log.</p></div>
+                        <h2 class="font-bold">Status Prospek</h2>
+                        <form method="POST" action="{{ route('leads.status', $lead) }}" class="mt-4 space-y-3">
+                            @csrf @method('PATCH')
+                            <label class="block text-xs font-semibold">Status<select name="status" class="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">@foreach(['new'=>'Baru','reviewing'=>'Ditinjau','qualified'=>'Potensial','contacted'=>'Dihubungi','saved'=>'Disimpan','completed'=>'Selesai','converted'=>'Konversi','dismissed'=>'Ditolak'] as $value => $label)<option value="{{ $value }}" @selected($lead->status === $value)>{{ $label }}</option>@endforeach</select></label>
+                            <label class="block text-xs font-semibold">Catatan<textarea name="operator_notes" maxlength="5000" class="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">{{ $lead->operator_notes }}</textarea></label>
+                            <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan status</button>
+                        </form><div class="mt-4 flex justify-between items-center text-sm"><span class="text-slate-500">Status</span><span class="font-semibold">{{ ['new'=>'Baru','reviewing'=>'Ditinjau','qualified'=>'Potensial','contacted'=>'Dihubungi','converted'=>'Konversi','dismissed'=>'Diabaikan'][$lead->status] ?? $lead->status }}</span></div><div class="mt-3 flex justify-between items-center text-sm"><span class="text-slate-500">Skor prospek</span><span class="font-semibold">{{ $lead->score === null ? 'Belum dinilai' : $lead->score.'/100' }}</span></div>
+                        <div class="mt-5 pt-4 border-t border-slate-100"><p class="text-xs text-slate-500">Perubahan status tersimpan dalam riwayat aktivitas.</p></div>
                     </section>
                     <section class="bg-white rounded-2xl border border-slate-200 p-5"><div class="flex items-center justify-between gap-2"><h2 class="font-bold">Draft Komentar</h2><span class="text-xs bg-slate-100 rounded-full px-2 py-1">{{ $drafts->count() }}</span></div>
                         @forelse($drafts as $draft)<div class="mt-4 border-t border-slate-100 pt-3"><div class="flex justify-between text-xs font-semibold text-slate-500"><span>{{ ucfirst($draft->variant_key) }}</span><span>{{ str_replace('_', ' ', $draft->status) }}</span></div><p class="text-sm text-slate-700 whitespace-pre-wrap break-words mt-2">{{ $draft->body }}</p></div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Services\Discovery\QualifyDiscoveredPost;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,8 +15,11 @@ class LeadInboxController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'priority' => ['nullable', Rule::in(['high', 'medium', 'low', 'unscored'])],
-            'status' => ['nullable', Rule::in(['new', 'reviewing', 'qualified', 'contacted', 'converted', 'dismissed'])],
-            'platform' => ['nullable', Rule::in(['threads', 'instagram'])],
+            'status' => ['nullable', Rule::in(['new', 'reviewing', 'qualified', 'contacted', 'converted', 'dismissed', 'saved', 'completed'])],
+            'platform' => ['nullable', Rule::in(['threads', 'instagram', 'web'])],
+            'service_category' => ['nullable', Rule::in(array_keys(QualifyDiscoveredPost::SERVICES))],
+            'source' => ['nullable', 'string', 'max:100', 'regex:/\A[a-zA-Z0-9_-]+\z/'],
+            'min_score' => ['nullable', 'integer', 'between:0,100'],
             'sort' => ['nullable', Rule::in(['newest', 'oldest', 'score_high', 'score_low'])],
         ]);
 
@@ -35,6 +39,16 @@ class LeadInboxController extends Controller
         }
         if (filled($filters['platform'] ?? null)) {
             $query->whereHas('post', fn ($posts) => $posts->where('platform', $filters['platform']));
+        }
+
+        if (filled($filters['source'] ?? null)) {
+            $query->whereHas('post.analyses', fn ($analyses) => $analyses->where('output->source', $filters['source']));
+        }
+        if (filled($filters['service_category'] ?? null)) {
+            $query->where('service_category', $filters['service_category']);
+        }
+        if (filled($filters['min_score'] ?? null)) {
+            $query->where('score', '>=', $filters['min_score']);
         }
 
         match ($filters['sort'] ?? 'newest') {

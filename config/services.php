@@ -35,11 +35,16 @@ return [
         ],
     ],
 
+    'ollama' => [
+        'enabled' => (bool) env('OLLAMA_ENABLED', false),
+        'url' => env('OLLAMA_URL', 'http://127.0.0.1:11434'),
+        'model' => env('OLLAMA_MODEL'),
+    ],
+
     'groq' => [
         'key' => env('GROQ_API_KEY'),
         'model' => env('GROQ_MODEL', 'openai/gpt-oss-20b'),
     ],
-
 
     'threads' => [
         'app_id' => env('THREADS_APP_ID'),
@@ -58,4 +63,9 @@ return [
         ],
     ],
 
+    'risengrowth_python' => [
+        'sources' => base_path('scraper/sources.json'),
+        'script' => base_path('scraper/main.py'),
+        'bin' => env('RISENGROWTH_PYTHON', base_path('scraper/.venv/bin/python')),
+    ],
 ];

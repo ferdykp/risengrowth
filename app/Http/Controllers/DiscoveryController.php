@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiAnalysis;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,9 +15,8 @@ class DiscoveryController extends Controller
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(['queued', 'running', 'completed', 'failed', 'partial'])],
             'keyword' => ['nullable', 'integer', 'min:1'],
+            'qualification' => ['nullable', Rule::in(['qualified', 'uncertain', 'rejected'])],
         ]);
-
-
 
         $accounts = DB::table('social_accounts')
             ->select([
@@ -30,14 +30,13 @@ class DiscoveryController extends Controller
             ->orderBy('platform')
             ->get();
 
-
         $keywords = DB::table('search_keywords')
             ->whereNull('deleted_at')->orderBy('phrase')->get();
 
         $runsQuery = DB::table('discovery_runs as r')
             ->join('search_keywords as k', 'r.search_keyword_id', '=', 'k.id')
-            ->join('social_accounts as a', 'r.social_account_id', '=', 'a.id')
-            ->select('r.*', 'k.phrase as keyword_phrase', 'a.platform', 'a.username as account_username');
+            ->leftJoin('social_accounts as a', 'r.social_account_id', '=', 'a.id')
+            ->select('r.*', 'k.phrase as keyword_phrase', 'r.source_type', 'a.platform', 'a.username as account_username');
 
         if (filled($filters['status'] ?? null)) {
             $runsQuery->where('r.status', $filters['status']);
@@ -46,8 +45,20 @@ class DiscoveryController extends Controller
             $runsQuery->where('r.search_keyword_id', (int) $filters['keyword']);
         }
 
+        $analyses = AiAnalysis::query()->with('post')
+            ->whereIn('id', AiAnalysis::query()->selectRaw('MAX(id)')->groupBy('discovered_post_id'));
+        if (filled($filters['qualification'] ?? null)) {
+            $analyses->where('output->status', $filters['qualification']);
+        }
+        $sourcePath = config('services.risengrowth_python.sources');
+        $sourceConfig = is_readable($sourcePath) ? json_decode(file_get_contents($sourcePath), true) : [];
+        $sourceConfig = is_array($sourceConfig) ? $sourceConfig : [];
+
         return view('discovery.index', [
             'accounts' => $accounts,
+            'postReviews' => $analyses->latest('id')->paginate(15, ['*'], 'posts_page')->withQueryString(),
+            'activeSources' => collect($sourceConfig['sources'] ?? [])->where('enabled', true)->pluck('id'),
+            'lastSuccessfulScan' => DB::table('discovery_runs')->whereIn('status', ['completed', 'partial'])->max('finished_at'),
             'keywords' => $keywords,
             'runs' => $runsQuery->orderByDesc('r.created_at')->orderByDesc('r.id')->paginate(12)->withQueryString(),
             'totalRuns' => DB::table('discovery_runs')->count(),

@@ -65,7 +65,7 @@
     |--------------------------------------------------------------------------
     */
 
-        $canRunDiscovery = $isAdmin && $connectedAccount !== null && $enabledKeywords->isNotEmpty();
+        $canRunDiscovery = $isAdmin && $enabledKeywords->isNotEmpty();
 
         /*
     |--------------------------------------------------------------------------
@@ -148,6 +148,13 @@
                 <form id="discovery-run-form" method="POST" action="{{ route('discovery.run') }}"
                     class="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
                     @csrf
+                    <div>
+                        <label for="run-source" class="sr-only">Sumber discovery</label>
+                        <select id="run-source" name="source" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                            <option value="threads" @selected(old('source', 'threads') === 'threads')>Threads API</option>
+                            <option value="python" @selected(old('source') === 'python')>Public web / API (Python)</option>
+                        </select>
+                    </div>
 
                     <div class="w-full sm:w-auto">
 
@@ -204,7 +211,7 @@
                 <div class="min-w-0">
 
                     <p class="text-sm font-semibold text-emerald-900">
-                        Pencarian berhasil
+                        Proses diterima
                     </p>
 
                     <p class="mt-1 text-sm leading-relaxed text-emerald-800">
@@ -287,7 +294,7 @@
                         </p>
 
                         <p class="mt-1 text-xs leading-relaxed text-amber-800">
-                            Hubungkan akun Threads atau periksa masa berlaku token melalui Settings.
+                            Untuk mencari postingan Threads, buka Settings lalu Connect Threads. Akun harus memberikan izin threads_keyword_search. Pilihan Public web / API hanya mencari sumber web yang dikonfigurasi, bukan Threads.
                         </p>
 
                     </div>
@@ -341,9 +348,9 @@
                 </span>
 
                 <span>
-                    Siap mencari menggunakan akun
+                    Threads terhubung · Akun
                     <span class="font-semibold text-slate-700">
-                        {{ '@' . data_get($connectedAccount, 'username', 'Threads') }}
+                        {{ data_get($connectedAccount, 'username') ?: 'Threads' }}
                     </span>
                 </span>
 
@@ -356,7 +363,7 @@
                 <span class="hidden text-slate-300 sm:inline">·</span>
 
                 <span>
-                    Maksimal 25 hasil per pencarian
+                    Maksimal 200 hasil terfilter per pencarian
                 </span>
 
             </div>
@@ -759,7 +766,7 @@
 
 
                                 <td class="py-4 pr-4 text-slate-600">
-                                    {{ ucfirst(data_get($run, 'platform', '-')) }}
+                                    {{ data_get($run, 'source_type') === 'python' ? 'Public web / API' : ucfirst(data_get($run, 'platform', '-')) }}
                                 </td>
 
 
@@ -835,6 +842,40 @@
 
         </section>
 
+        <section class="mt-6 rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+            <h2 class="text-lg font-bold">Review postingan ditemukan</h2>
+            <p class="text-sm text-slate-600">Sumber aktif: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ?? 'Belum ada' }}.</p>
+            <p class="text-xs text-slate-500">Threads memerlukan akun dan izin pencarian API resmi. Hasil public web hanya berasal dari sumber yang dikonfigurasi admin.</p>
+            <form method="GET" action="{{ route('discovery.index') }}" class="flex flex-wrap gap-3">
+                <label class="text-sm">Kualifikasi
+                    <select name="qualification" class="rounded-lg border border-slate-200 p-2">
+                        <option value="">Semua postingan</option>
+                        @foreach(['qualified' => 'Qualified', 'uncertain' => 'Perlu review', 'rejected' => 'Ditolak'] as $value => $label)
+                            <option value="{{ $value }}" @selected(($filters['qualification'] ?? '') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Filter</button>
+            </form>
+            @forelse($postReviews as $analysis)
+                <article class="border-t border-slate-100 pt-4 space-y-2">
+                    <p class="text-xs text-slate-500">{{ $analysis->output['source'] ?? $analysis->post->platform }} · {{ $analysis->output['status'] ?? $analysis->status }} · {{ $analysis->score === null ? 'Manual' : $analysis->score.'/100' }}</p>
+                    <p class="text-sm whitespace-pre-wrap break-words">{{ $analysis->post->body }}</p>
+                    <p class="text-xs text-slate-600">{{ $analysis->output['rationale'] ?? '' }}</p>
+                    @if(!empty($analysis->output['evidence']))<p class="text-xs text-slate-500 break-words">Bukti: {{ json_encode($analysis->output['evidence'], JSON_UNESCAPED_UNICODE) }}</p>@endif
+                    @if($analysis->post->permalink && parse_url($analysis->post->permalink, PHP_URL_SCHEME) === 'https')<a href="{{ $analysis->post->permalink }}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">Postingan asli ↗</a>@endif
+                    @if(!empty($analysis->output['local_ai']))<p class="text-xs text-slate-600">Saran AI (perlu review): {{ $analysis->output['local_ai']['reason'] }} {{ $analysis->output['local_ai']['follow_up'] }}</p>@endif
+                    @if(config('services.ollama.enabled'))<form method="POST" action="{{ route('discovery.posts.local', $analysis->post) }}">@csrf<button class="text-sm text-blue-700 underline">Minta saran AI lokal</button></form>@endif
+                    <form method="POST" action="{{ route('discovery.posts.review', $analysis->post) }} class="flex flex-col sm:flex-row gap-2">
+                        @csrf @method('PATCH')
+                        <select name="qualification" aria-label="Hasil review" class="rounded-lg border border-slate-200 p-2 text-sm"><option value="qualified">Qualified</option><option value="uncertain">Perlu review</option><option value="rejected">Ditolak</option></select>
+                        <input name="reason" required maxlength="1000" placeholder="Alasan review" aria-label="Alasan review" class="min-w-0 flex-1 rounded-lg border border-slate-200 p-2 text-sm">
+                        <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan review</button>
+                    </form>
+                </article>
+            @empty<p class="text-sm text-slate-500">Belum ada hasil kualifikasi.</p>@endforelse
+            {{ $postReviews->links() }}
+        </section>
     </div>
 
 @endsection

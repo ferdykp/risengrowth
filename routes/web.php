@@ -1,20 +1,23 @@
 <?php
 
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CommentGeneratorController;
+use App\Http\Controllers\DiscoveredPostReviewController;
 use App\Http\Controllers\DiscoveryController;
+use App\Http\Controllers\DiscoveryRunController;
+use App\Http\Controllers\InitialPasswordController;
+use App\Http\Controllers\Integrations\ThreadsConnectionController;
 use App\Http\Controllers\InternalAuthController;
 use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\LeadDetailController;
 use App\Http\Controllers\LeadInboxController;
+use App\Http\Controllers\LeadStatusController;
+use App\Http\Controllers\LocalQualificationController;
 use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\ReviewQueueController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\DiscoveryRunController;
-use App\Http\Controllers\InitialPasswordController;
-use App\Http\Controllers\Integrations\ThreadsConnectionController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [InternalAuthController::class, 'show'])->name('login');
@@ -45,6 +48,9 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
 
     Route::get('/', OverviewController::class)->name('overview');
     Route::get('/leads', LeadInboxController::class)->name('leads.index');
+    Route::patch('/leads/{lead}/status', LeadStatusController::class)->middleware('throttle:account-mutations')->name('leads.status');
+    Route::post('/discovery/posts/{post}/local-analysis', LocalQualificationController::class)->middleware('throttle:ai-generation')->name('discovery.posts.local');
+    Route::patch('/discovery/posts/{post}', DiscoveredPostReviewController::class)->middleware('throttle:account-mutations')->name('discovery.posts.review');
     Route::get('/leads/{lead}', LeadDetailController::class)->name('leads.show');
     Route::get('/discovery', DiscoveryController::class)->name('discovery.index');
 

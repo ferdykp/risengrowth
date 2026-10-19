@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -17,7 +16,6 @@ class DiscoveryTest extends TestCase
         parent::setUp();
         $this->actingAs(User::factory()->create());
     }
-
 
     public function test_empty_discovery_page_is_rendered(): void
     {
@@ -42,12 +40,10 @@ class DiscoveryTest extends TestCase
             ->assertSee('Eksplorasi Prospek')
             ->assertSee('Jalankan Pencarian')
             ->assertSee(
-                'action="' . route('discovery.run') . '"',
+                'action="'.route('discovery.run').'"',
                 false
             );
     }
-
-
 
     public function test_invalid_status_filter_is_rejected(): void
     {
@@ -76,5 +72,16 @@ class DiscoveryTest extends TestCase
         $this->get(route('discovery.index'))
             ->assertOk()->assertSee('butuh website');
         $this->assertDatabaseCount('discovery_runs', 0);
+    }
+
+    public function test_threads_is_the_default_source_and_missing_connection_is_explained(): void
+    {
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('discovery.index'))
+            ->assertOk()
+            ->assertSee('value="threads" selected', false)
+            ->assertSee('Akun Threads belum tersedia')
+            ->assertSee('threads_keyword_search')
+            ->assertSee(route('settings.index'));
     }
 }
