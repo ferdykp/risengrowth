@@ -92,25 +92,25 @@
         $statistics = [
             [
                 'label' => 'Total proses',
-                'value' => $totalRuns,
+                'value' => $totalRuns, 'key' => 'totalRuns',
                 'note' => 'Seluruh pencarian',
                 'icon' => 'manage_search',
             ],
             [
                 'label' => 'Proses selesai',
-                'value' => $completedRuns,
+                'value' => $completedRuns, 'key' => 'completedRuns',
                 'note' => 'Pencarian berhasil',
                 'icon' => 'task_alt',
             ],
             [
                 'label' => 'Postingan ditemukan',
-                'value' => $totalDiscovered,
+                'value' => $totalDiscovered, 'key' => 'totalDiscovered',
                 'note' => 'Postingan unik',
                 'icon' => 'forum',
             ],
             [
                 'label' => 'Keyword aktif',
-                'value' => $activeKeywords,
+                'value' => $activeKeywords, 'key' => 'activeKeywords',
                 'note' => 'Keyword dipantau',
                 'icon' => 'tag',
             ],
@@ -179,13 +179,13 @@
 
                     </div>
 
-                    <button id="discovery-run-button" type="submit" @disabled(!$canRunDiscovery)
+                    <button data-unavailable="{{ $canRunDiscovery ? 'false' : 'true' }}" id="discovery-run-button" type="submit" @disabled(!$canRunDiscovery)
                         class="inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
                         <span class="material-symbols-outlined text-[19px]">
                             search
                         </span>
 
-                        <span>Jalankan Pencarian</span>
+                        <span data-run-label>Jalankan Pencarian</span>
 
                     </button>
 
@@ -194,35 +194,14 @@
             @endif
 
         </header>
+        <div data-storage-key="risengrowth-discovery-{{ auth()->id() }}" id="discovery-live-status" role="status" aria-live="polite" hidden class="mb-5 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-800"></div>
+        <button type="button" id="discovery-stop-tracking" hidden class="mb-3 text-xs text-blue-700 underline">Hentikan pemantauan permintaan (tidak membatalkan job)</button>
+        <p class="mb-5 text-xs text-slate-500" id="discovery-live-health">Status dan riwayat diperbarui otomatis setiap 4 detik.</p>
 
 
         {{-- ================================================================ --}}
         {{-- FLASH MESSAGES                                                   --}}
         {{-- ================================================================ --}}
-
-        @if (session('success'))
-            <div role="status"
-                class="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-
-                <span class="material-symbols-outlined text-[20px] text-emerald-700">
-                    check_circle
-                </span>
-
-                <div class="min-w-0">
-
-                    <p class="text-sm font-semibold text-emerald-900">
-                        Proses diterima
-                    </p>
-
-                    <p class="mt-1 text-sm leading-relaxed text-emerald-800">
-                        {{ session('success') }}
-                    </p>
-
-                </div>
-
-            </div>
-        @endif
-
 
         @if ($errors->any())
 
@@ -391,7 +370,7 @@
 
                     </div>
 
-                    <p class="mt-5 text-3xl font-bold tabular-nums tracking-tight text-slate-950">
+                    <p data-discovery-metric="{{ $stat['key'] }}" class="mt-5 text-3xl font-bold tabular-nums tracking-tight text-slate-950">
                         {{ number_format((int) $stat['value'], 0, ',', '.') }}
                     </p>
 
@@ -737,94 +716,8 @@
                     </thead>
 
 
-                    <tbody>
-
-                        @forelse ($runs as $run)
-                            @php
-                                $runStatus = data_get($run, 'status', 'queued');
-
-                                $statusLabel = $statusLabels[$runStatus] ?? ucfirst($runStatus);
-
-                                $statusClass = $statusClasses[$runStatus] ?? 'bg-slate-100 text-slate-600';
-                            @endphp
-
-                            <tr class="border-b border-slate-100">
-
-                                <td class="py-4 pr-4">
-
-                                    <p class="font-semibold text-slate-900">
-                                        {{ data_get($run, 'keyword_phrase', '-') }}
-                                    </p>
-
-                                    @if (filled(data_get($run, 'error_summary')))
-                                        <p class="mt-1 max-w-xs break-words text-xs leading-relaxed text-red-700">
-                                            {{ data_get($run, 'error_summary') }}
-                                        </p>
-                                    @endif
-
-                                </td>
-
-
-                                <td class="py-4 pr-4 text-slate-600">
-                                    {{ data_get($run, 'source_type') === 'python' ? 'Public web / API' : ucfirst(data_get($run, 'platform', '-')) }}
-                                </td>
-
-
-                                <td class="py-4 pr-4">
-
-                                    <span
-                                        class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $statusClass }}">
-                                        {{ $statusLabel }}
-                                    </span>
-
-                                </td>
-
-
-                                <td class="py-4 pr-4 tabular-nums text-slate-700">
-                                    {{ number_format((int) data_get($run, 'fetched_count', 0), 0, ',', '.') }}
-                                </td>
-
-
-                                <td class="py-4 pr-4 tabular-nums text-slate-700">
-                                    {{ number_format((int) data_get($run, 'added_count', 0), 0, ',', '.') }}
-                                </td>
-
-
-                                <td class="whitespace-nowrap py-4 text-slate-500">
-
-                                    @if (data_get($run, 'created_at'))
-                                        {{ \Illuminate\Support\Carbon::parse(data_get($run, 'created_at'))->format('d M Y, H:i') }}
-                                    @else
-                                        -
-                                    @endif
-
-                                </td>
-
-                            </tr>
-
-                        @empty
-
-                            <tr>
-
-                                <td colspan="6" class="py-16 text-center">
-
-                                    <span class="material-symbols-outlined text-4xl text-slate-300">
-                                        history
-                                    </span>
-
-                                    <p class="mt-2 font-semibold text-slate-900">
-                                        Belum ada riwayat pencarian
-                                    </p>
-
-                                    <p class="mt-1 text-sm text-slate-500">
-                                        Pilih keyword lalu jalankan pencarian pertama.
-                                    </p>
-
-                                </td>
-
-                            </tr>
-                        @endforelse
-
+                    <tbody id="discovery-run-rows">
+                        @include('discovery.partials.run-rows', ['runs' => $runs])
                     </tbody>
 
                 </table>
@@ -866,7 +759,7 @@
                     @if($analysis->post->permalink && parse_url($analysis->post->permalink, PHP_URL_SCHEME) === 'https')<a href="{{ $analysis->post->permalink }}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">Postingan asli ↗</a>@endif
                     @if(!empty($analysis->output['local_ai']))<p class="text-xs text-slate-600">Saran AI (perlu review): {{ $analysis->output['local_ai']['reason'] }} {{ $analysis->output['local_ai']['follow_up'] }}</p>@endif
                     @if(config('services.ollama.enabled'))<form method="POST" action="{{ route('discovery.posts.local', $analysis->post) }}">@csrf<button class="text-sm text-blue-700 underline">Minta saran AI lokal</button></form>@endif
-                    <form method="POST" action="{{ route('discovery.posts.review', $analysis->post) }} class="flex flex-col sm:flex-row gap-2">
+                    <form method="POST" action="{{ route('discovery.posts.review', $analysis->post) }}" class="flex flex-col sm:flex-row gap-2">
                         @csrf @method('PATCH')
                         <select name="qualification" aria-label="Hasil review" class="rounded-lg border border-slate-200 p-2 text-sm"><option value="qualified">Qualified</option><option value="uncertain">Perlu review</option><option value="rejected">Ditolak</option></select>
                         <input name="reason" required maxlength="1000" placeholder="Alasan review" aria-label="Alasan review" class="min-w-0 flex-1 rounded-lg border border-slate-200 p-2 text-sm">
@@ -879,3 +772,7 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script src="{{ asset('discovery-live.js').'?v='.filemtime(public_path('discovery-live.js')) }}" defer></script>
+@endpush

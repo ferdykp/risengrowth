@@ -104,3 +104,55 @@ The integration follows [Ollama's structured-output API](https://docs.ollama.com
 - `scraper/.venv/bin/python -m unittest discover -s scraper/tests -v` uses deterministic fixtures/mocked HTTP.
 - `PythonDiscoveryPipelineTest::test_real_python_worker_fixture_reaches_the_lead_inbox` starts the actual Python interpreter, uses real extraction/JSON/qualification/persistence and renders the inbox; only its upstream HTTP is replaced with fixtures. It skips if the local venv is missing.
 - Live source access, live Ollama inference, MySQL concurrency, browser rendering and Ubuntu process supervision require environment-specific validation. Never treat mocked results as retrieved live leads.
+
+## Apify Threads feasibility probe (not automatic discovery)
+
+The `openclawai/threads-scraper` adapter is an experimental probe based on the publisher's documented `search_latest` input and post output. It is not connected to the scheduler or Lead Inbox until a real `website` run has returned usable posts from other public accounts and the operator has checked those URLs, usage and applicable access terms. Existing official Threads and Python workflows are unchanged.
+
+Set these values in the environment of the machine executing the probe. Do not paste tokens into chat, command-line arguments, screenshots or source control:
+
+```dotenv
+APIFY_TOKEN=your_private_token
+APIFY_PROBE_DAILY_RUNS=1
+APIFY_PROBE_MAX_CHARGE_USD=0.05
+APIFY_MONTHLY_BUDGET_USD=4.50
+THREADS_EXCLUDED_USERNAMES=risencode.dev,risendev
+CACHE_STORE=database
+```
+
+The token's account must be permitted to run this Actor and read its run metadata and datasets. The probe sends a maximum total charge of USD 0.05, an Actor timeout of 120 seconds, and a limit of 10 posts. Before starting, it reads Apify's reported account-wide monthly usage and account limit; missing/unverifiable usage fails closed. It refuses a run that would reach the lower of the configured budget and the account limit. These guards do not confirm your account plan or exact remaining promotional credit, reserve credit against other external consumers, or replace checking Apify Billing. Set the actual account spending limit in Apify Console as well.
+
+The run-start attempt is reserved under a shared cache lock before the POST. An uncertain connection failure counts toward the daily limit, because the remote run may already exist. Do not clear that counter to repeat an uncertain request: first inspect Apify Console for the run. The default is one attempted start per UTC day; configuration is capped at two. Reads of an existing run do not start another Actor. A 402/429 pauses new probes for 24 hours without automatic retry. After resolving the account issue, an administrator can remove only the `apify-probe-paused` cache key using the configured cache store; do not flush the whole cache.
+
+After deploying these files and running normal Composer autoload/Artisan cache steps:
+
+```bash
+php artisan config:clear
+php artisan growth:apify-probe --start --keyword=website
+```
+
+This command may consume Apify credit. It starts exactly one asynchronous Actor and immediately prints its run ID. If still running, wait about 15–30 seconds and inspect the SAME run, using the run ID printed by the command:
+
+```bash
+php artisan growth:apify-probe --run=YOUR_RUN_ID --keyword=website
+```
+
+There is no unbounded polling loop, automatic restart, fallback Actor or retry of a run-start POST. If the POST times out before an ID is received, recover the run ID from Apify Console rather than starting again. The per-run reported usage is displayed when returned; it must not be treated as a complete account invoice.
+
+On success the probe prints the original validated Threads post links, author usernames and counts of excluded own posts and duplicate post IDs. All usernames from existing Threads social accounts and the configured exclusion list are filtered case-insensitively. Error/unknown hint rows, mismatched Actor/query, invalid data or more than ten post rows fail the probe. The exact Free Plan information notice observed in the live run is counted separately; ten posts plus this one notice are accepted. A successful empty dataset or a dataset containing only own posts does NOT pass feasibility. No post or lead is inserted and no comment is published.
+
+Verify before enabling integration:
+
+1. The run is `SUCCEEDED`, and the input was `search_latest` for `website`.
+2. Returned original links are public, relevant and authored by accounts other than RisenDev.
+3. Actual billing and available credits are acceptable. Actor marketing is not proof of free unlimited access or source authorization.
+4. Mapping is compatible with the actual dataset. Published examples and `Http::fake` fixtures are not live results.
+
+Tests:
+
+```bash
+php artisan test --compact tests/Feature/ApifyThreadsProviderTest.php
+php artisan test --compact
+```
+
+References: [Actor documentation](https://apify.com/openclawai/threads-scraper), [async run API](https://docs.apify.com/api/v2/actors-runs-post), [account limits/usage](https://docs.apify.com/api/v2/users-me-limits-get). No extra Composer dependency, migration or Python package is required for this Laravel HTTP adapter.

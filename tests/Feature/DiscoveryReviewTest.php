@@ -20,7 +20,8 @@ class DiscoveryReviewTest extends TestCase
         AiAnalysis::create(['discovered_post_id' => $post->id, 'provider' => 'rules', 'model' => 'rules-v1', 'prompt_version' => 'rules-v1', 'status' => 'completed', 'output' => ['status' => 'uncertain', 'rationale' => 'Review needed']]);
 
         $this->actingAs($user)->get(route('discovery.index', ['qualification' => 'uncertain']))
-            ->assertOk()->assertSee('Website project details');
+            ->assertOk()->assertSee('Website project details')
+            ->assertSee('action="'.route('discovery.posts.review', $post).'"', false);
         $this->patch(route('discovery.posts.review', $post), ['qualification' => 'qualified', 'reason' => 'Confirmed buyer request'])
             ->assertRedirect()->assertSessionHasNoErrors();
 

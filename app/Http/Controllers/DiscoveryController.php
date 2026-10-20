@@ -4,17 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\AiAnalysis;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class DiscoveryController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request): View|JsonResponse
     {
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(['queued', 'running', 'completed', 'failed', 'partial'])],
             'keyword' => ['nullable', 'integer', 'min:1'],
+            'after_id' => ['nullable', 'integer', 'min:0'],
+            'track_keyword' => ['nullable', 'integer', 'min:1'],
+            'track_source' => ['nullable', Rule::in(['threads', 'python'])],
             'qualification' => ['nullable', Rule::in(['qualified', 'uncertain', 'rejected'])],
         ]);
 
@@ -43,6 +47,29 @@ class DiscoveryController extends Controller
         }
         if (filled($filters['keyword'] ?? null)) {
             $runsQuery->where('r.search_keyword_id', (int) $filters['keyword']);
+        }
+
+        if ($request->expectsJson()) {
+            $runs = (clone $runsQuery)->orderByDesc('r.id')->paginate(12)->withQueryString();
+            $tracked = null;
+            if (filled($filters['track_keyword'] ?? null) && filled($filters['track_source'] ?? null)) {
+                $tracked = DB::table('discovery_runs')
+                    ->where('id', '>', $filters['after_id'] ?? 0)
+                    ->where('search_keyword_id', $filters['track_keyword'])
+                    ->where('source_type', $filters['track_source'])
+                    ->orderBy('id')->first(['id', 'source_type', 'status', 'fetched_count', 'added_count', 'error_summary', 'started_at', 'finished_at']);
+            }
+
+            return response()->json([
+                'history_html' => view('discovery.partials.run-rows', ['runs' => $runs])->render(),
+                'metrics' => [
+                    'totalRuns' => DB::table('discovery_runs')->count(),
+                    'completedRuns' => DB::table('discovery_runs')->where('status', 'completed')->count(),
+                    'totalDiscovered' => DB::table('discovered_posts')->count(),
+                    'activeKeywords' => $keywords->where('enabled', 1)->count(),
+                ],
+                'tracked' => $tracked,
+            ])->header('Cache-Control', 'no-store, private');
         }
 
         $analyses = AiAnalysis::query()->with('post')

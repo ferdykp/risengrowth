@@ -270,10 +270,10 @@ class ThreadsDiscoveryTest extends TestCase
         }
     }
 
-    #[TestWith([429, ['error' => ['code' => 4]]])]
-    #[TestWith([200, ['unexpected' => []]])]
-    #[TestWith([200, ['data' => ['id' => 'wrong-shape']]])]
-    public function test_rate_limit_or_invalid_response_is_not_success(int $status, array $body): void
+    #[TestWith([429, ['error' => ['code' => 4]], 'THREADS_RATE_LIMITED'])]
+    #[TestWith([200, ['unexpected' => []], 'THREADS_SEARCH_FAILED'])]
+    #[TestWith([200, ['data' => ['id' => 'wrong-shape']], 'THREADS_SEARCH_FAILED'])]
+    public function test_rate_limit_or_invalid_response_is_not_success(int $status, array $body, string $errorCode): void
     {
         $admin = User::factory()->admin()->create();
         $this->connectedAccount($admin);
@@ -286,7 +286,7 @@ class ThreadsDiscoveryTest extends TestCase
         Http::assertSentCount(1);
         $this->assertDatabaseCount('discovered_posts', 0);
         $this->assertDatabaseHas('discovery_runs', [
-            'status' => 'failed', 'error_code' => 'THREADS_SEARCH_FAILED',
+            'status' => 'failed', 'error_code' => $errorCode,
         ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Discovery;
 
+use App\Exceptions\ThreadsSearchException;
 use App\Models\DiscoveredPost;
 use App\Models\Lead;
 use App\Models\SocialAccount;
@@ -114,10 +115,10 @@ class RunThreadsDiscovery
                 DB::table('discovery_runs')->where('id', $runId)->update([
                     'status' => 'failed',
                     'fetched_count' => $fetched,
-                    'error_code' => $stage === 'search' ? 'THREADS_SEARCH_FAILED' : 'DISCOVERY_STORAGE_FAILED',
-                    'error_summary' => $stage === 'search'
+                    'error_code' => $exception instanceof ThreadsSearchException ? $exception->errorCode : ($stage === 'search' ? 'THREADS_SEARCH_FAILED' : 'DISCOVERY_STORAGE_FAILED'),
+                    'error_summary' => $exception instanceof ThreadsSearchException ? $exception->getMessage() : ($stage === 'search'
                         ? 'Pencarian Threads gagal. Periksa koneksi, token, izin API, atau batas request.'
-                        : 'Penyimpanan gagal; perubahan postingan dan lead dibatalkan.',
+                        : 'Penyimpanan gagal; perubahan postingan dan lead dibatalkan.'),
                     'finished_at' => now(),
                     'updated_at' => now(),
                 ]);

@@ -2,6 +2,7 @@
 
 namespace App\Services\Social\Threads;
 
+use App\Exceptions\ThreadsSearchException;
 use App\Models\SocialAccount;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -61,7 +62,16 @@ class ThreadsSearchService
                 'http_status' => $response->status(),
                 'api_code' => is_int($code) ? $code : null,
             ]);
-            throw new RuntimeException('Threads API menolak pencarian.');
+            if ($response->status() === 429 || in_array($code, [4, 613], true)) {
+                throw new ThreadsSearchException('THREADS_RATE_LIMITED', 'Batas request Threads tercapai. Tunggu sebelum mencoba lagi.');
+            }
+            if ($response->status() === 401 || $code === 190) {
+                throw new ThreadsSearchException('THREADS_TOKEN_INVALID', 'Token Threads tidak valid atau kedaluwarsa. Hubungkan ulang akun melalui Settings.');
+            }
+            if ($response->status() === 403 || in_array($code, [10, 200], true)) {
+                throw new ThreadsSearchException('THREADS_PERMISSION_DENIED', 'Threads menolak akses pencarian. Periksa izin threads_keyword_search dan persetujuan aplikasi di Meta.');
+            }
+            throw new ThreadsSearchException('THREADS_SEARCH_FAILED', 'Threads API menolak pencarian. Periksa konfigurasi dan akses aplikasi di Meta.');
         }
 
         $posts = $response->json('data');
