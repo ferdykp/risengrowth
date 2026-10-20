@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ApifySettingsController;
 use App\Http\Controllers\CommentGeneratorController;
 use App\Http\Controllers\DiscoveredPostReviewController;
 use App\Http\Controllers\DiscoveryController;
@@ -74,6 +75,9 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::patch('/settings/profile', [SettingsController::class, 'profile'])->middleware('throttle:account-mutations')->name('settings.profile');
     Route::patch('/settings/preferences', [SettingsController::class, 'preferences'])->middleware('throttle:account-mutations')->name('settings.preferences');
+
+    Route::patch('/discovery/apify-settings', ApifySettingsController::class)
+        ->middleware(['admin', 'throttle:account-mutations'])->name('discovery.apify.settings');
 
     Route::post('/discovery/run', DiscoveryRunController::class)
         ->middleware(['admin', 'throttle:6,1'])

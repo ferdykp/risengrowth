@@ -25,6 +25,8 @@ function mount(handler, restored = null) {
     form.action = 'https://example.test/discovery/run';
     form.values = {source: 'python', keyword_id: '2'};
     const rows = make('discovery-run-rows');
+    const reviews = make('discovery-post-reviews');
+    reviews.contains = () => false;
     const metric = {textContent: ''};
     const timers = new Map();
     let timerId = 0;
@@ -36,7 +38,7 @@ function mount(handler, restored = null) {
         FormData: class { constructor(input) { this.values = input.values; } get(key) { return this.values[key]; } },
         fetch: handler};
     vm.runInNewContext(source, context);
-    return {panel, health, button, stop, form, rows, metric, storage, timers,
+    return {panel, health, button, stop, form, rows, reviews, metric, storage, timers,
         async submit() { await form.listeners.submit({preventDefault() {}}); await flush(); },
         async tick() { const [id, callback] = [...timers][0]; timers.delete(id); await callback(); await flush(); }};
 }
@@ -103,4 +105,45 @@ test('polling connection failures are visible and retry without losing pending s
     assert.match(app.health.textContent, /Network unavailable/);
     assert.equal(app.button.disabled, true);
     assert.equal(app.timers.size, 1);
+});
+
+
+test('Apify restores and tracks the exact imported run even before the history cursor', async () => {
+    let requested;
+    let tracked = {status: 'running'};
+    const app = mount(async url => { requested = new URL(url); return json(snapshot(tracked)); },
+        {source: 'apify', keyword_id: 2, run_id: 7, after_id: 9, started: Date.now()});
+    await flush();
+    assert.equal(requested.searchParams.get('track_run'), '7');
+    assert.match(app.panel.textContent, /Threads via Apify sedang berjalan/);
+    tracked = {status: 'completed', source_type: 'apify', fetched_count: 10, added_count: 0};
+    await app.tick();
+    assert.match(app.panel.textContent, /10 postingan diterima, 0 lead baru/);
+    assert.equal(app.button.disabled, false);
+    assert.equal(app.storage.size, 0);
+});
+
+test('Apify empty dataset is distinct from the official API permission warning', async () => {
+    const app = mount(async (_, options = {}) => options.method === 'POST'
+        ? json({status: 'completed', source: 'apify', fetched: 0, added: 0}) : json(snapshot(null)));
+    await flush();
+    app.form.values.source = 'apify';
+    await app.submit();
+    assert.match(app.panel.textContent, /dataset Apify/);
+    assert.doesNotMatch(app.panel.textContent, /threads_keyword_search/);
+});
+
+
+test('new review results update live without replacing an actively edited form', async () => {
+    let html = '<article>First post</article>';
+    const app = mount(async () => json({...snapshot(null), reviews_html: html}));
+    await flush();
+    assert.match(app.reviews.innerHTML, /First post/);
+    app.reviews.contains = () => true;
+    html = '<article>New post</article>';
+    await app.tick();
+    assert.match(app.reviews.innerHTML, /First post/);
+    app.reviews.contains = () => false;
+    await app.tick();
+    assert.match(app.reviews.innerHTML, /New post/);
 });

@@ -74,12 +74,12 @@ class DiscoveryTest extends TestCase
         $this->assertDatabaseCount('discovery_runs', 0);
     }
 
-    public function test_threads_is_the_default_source_and_missing_connection_is_explained(): void
+    public function test_apify_is_the_default_source_and_provider_configuration_is_explained(): void
     {
         $this->actingAs(User::factory()->admin()->create())
             ->get(route('discovery.index'))
             ->assertOk()
-            ->assertSee('value="threads" selected', false)
+            ->assertSee('value="apify" selected', false)
             ->assertSee('Akun Threads belum tersedia')
             ->assertSee('threads_keyword_search')
             ->assertSee(route('settings.index'));

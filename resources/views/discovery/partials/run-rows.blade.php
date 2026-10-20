@@ -22,7 +22,11 @@
                                     </p>
 
                                     @if(data_get($run, 'status') === 'completed' && (int) data_get($run, 'fetched_count') === 0)
-                                        <p class="mt-1 max-w-sm text-xs leading-relaxed text-amber-800">{{ data_get($run, 'source_type') === 'threads' ? 'Threads API mengembalikan 0 postingan. Periksa keyword dan persetujuan akses threads_keyword_search di Meta. Akun terhubung belum membuktikan akses pencarian publik.' : 'Tidak ada kecocokan pada sumber public web / API yang dipindai. Pencarian ini tidak mencakup Threads.' }}</p>
+                                        <p class="mt-1 max-w-sm text-xs leading-relaxed text-amber-800">{{ in_array(data_get($run, 'source_type'), ['threads', 'apify']) ? (data_get($run, 'source_type') === 'apify' ? 'Dataset Apify tidak berisi postingan untuk keyword ini. Tidak ada lead yang dibuat.' : 'Threads API mengembalikan 0 postingan. Periksa keyword dan persetujuan akses threads_keyword_search di Meta. Akun terhubung belum membuktikan akses pencarian publik.') : 'Tidak ada kecocokan pada sumber public web / API yang dipindai. Pencarian ini tidak mencakup Threads.' }}</p>
+                                    @endif
+                                    @if(data_get($run, 'source_type') === 'apify')
+                                        <p class="mt-1 text-xs text-slate-500">Qualified {{ $run->relevant_count }} · Review {{ $run->uncertain_count }} · Ditolak {{ $run->rejected_count }} · Akun sendiri {{ $run->excluded_own_count }}</p>
+                                        @if($run->provider_run_id)<p class="mt-1 text-xs text-slate-500 break-words">Run: {{ $run->provider_run_id }} · Usage dilaporkan: {{ $run->provider_usage_usd === null ? 'belum tersedia' : 'USD '.$run->provider_usage_usd }}</p>@endif
                                     @endif
                                     @if (filled(data_get($run, 'error_summary')))
                                         <p class="mt-1 max-w-xs break-words text-xs leading-relaxed text-red-700">
@@ -34,7 +38,7 @@
 
 
                                 <td class="py-4 pr-4 text-slate-600">
-                                    {{ data_get($run, 'source_type') === 'python' ? 'Public web / API' : ucfirst(data_get($run, 'platform', '-')) }}
+                                    {{ ['apify' => 'Threads / Apify', 'python' => 'Public web / API', 'threads' => 'Threads API'][$run->source_type] ?? $run->source_type }}
                                 </td>
 
 

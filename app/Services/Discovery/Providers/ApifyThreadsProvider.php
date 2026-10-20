@@ -18,7 +18,7 @@ class ApifyThreadsProvider
     public function __construct(private readonly PostNormalizer $normalizer) {}
 
     /** @return array{id: string, status: string, dataset_id: ?string, reported_usage_usd: ?float} */
-    public function start(string $keyword): array
+    public function start(string $keyword, ?int $dailyLimit = null): array
     {
         if (trim($keyword) === '' || mb_strlen($keyword) > 191) {
             throw new ApifyDiscoveryException('INVALID_KEYWORD', 'Keyword wajib diisi, maksimal 191 karakter.');
@@ -32,7 +32,7 @@ class ApifyThreadsProvider
             if (Cache::has('apify-probe-paused')) {
                 throw new ApifyDiscoveryException('PROVIDER_PAUSED', 'Probe dijeda setelah error kuota. Periksa billing sebelum menghapus cache apify-probe-paused.');
             }
-            $limit = max(1, min(2, (int) config('services.apify.probe_daily_runs')));
+            $limit = $dailyLimit === null ? max(1, min(2, (int) config('services.apify.probe_daily_runs'))) : max(1, min(10, $dailyLimit));
             $counter = 'apify-probe-starts:'.now()->utc()->format('Y-m-d');
             if ((int) Cache::get($counter, 0) >= $limit) {
                 throw new ApifyDiscoveryException('DAILY_LIMIT', 'Batas probe harian tercapai. Gunakan --run untuk membaca run yang sudah ada.');
@@ -48,6 +48,7 @@ class ApifyThreadsProvider
             if (! is_numeric($spent) || ! is_numeric($providerLimit) || (float) $spent < 0 || (float) $providerLimit <= 0) {
                 throw new ApifyDiscoveryException('USAGE_UNAVAILABLE', 'Pemakaian dan limit akun tidak dapat diverifikasi; Actor tidak dijalankan.');
             }
+            Cache::put('apify-last-account-usage', ['usage_usd' => (float) $spent, 'limit_usd' => (float) $providerLimit, 'checked_at' => now()->toIso8601String()], now()->addDay());
             if ((float) $spent + $charge >= min($budget, (float) $providerLimit)) {
                 throw new ApifyDiscoveryException('MONTHLY_BUDGET', 'Pemakaian akun mendekati batas budget; Actor tidak dijalankan.');
             }

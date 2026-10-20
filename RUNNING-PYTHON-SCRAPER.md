@@ -1,6 +1,51 @@
-# RisenGrowth — Self-hosted Python Scraper MVP
+# RisenGrowth — Threads discovery and deployment
 
-Existing Laravel retained. This is configured HTML discovery, **not unauthorized Threads search**. Quotes to Scrape is used solely as a permitted demo target. Demo content is not a source of real commercial leads.
+The website now uses **Threads via Apify** by default. The verified Actor is `openclawai/threads-scraper`, using `search_latest`, maximum 10 posts per run. Official Threads API and the optional Python public-web adapters remain selectable.
+
+## Deploy the web workflow to Ubuntu
+
+Keep the existing `.env`, `APP_KEY`, database, and leads. Back up the database before migrations. Use the PHP version required by the committed Composer lockfile (`composer check-platform-reqs`); do not update dependencies on the server to bypass requirements.
+
+Set these server environment values (never commit or share the token):
+
+```dotenv
+APIFY_TOKEN=your_server_token
+APIFY_PROBE_MAX_CHARGE_USD=0.05
+APIFY_MONTHLY_BUDGET_USD=4.50
+QUEUE_CONNECTION=database
+CACHE_STORE=database
+DB_QUEUE_RETRY_AFTER=150
+APP_ENV=production
+APP_DEBUG=false
+```
+
+Deploy the committed code with:
+
+```bash
+cd /var/www/risengrowth
+bash deploy-production.sh
+```
+
+The script stops on errors, installs locked dependencies, applies additive migrations, builds assets, caches Laravel configuration and asks workers to restart. It does not install a worker service or cron. Configure the Supervisor worker and cron shown below. Apify uses Laravel HTTP directly: Python, Playwright, Redis and Horizon are not required for this workflow.
+
+After deployment, log in as an admin:
+
+1. Open **Kata Kunci**, add/enable a Threads keyword, for example `website`.
+2. Open **Eksplorasi**. Check that the Apify panel says the token is available. New installations keep the provider and automation disabled until an admin enables them.
+3. To import your already successful test, choose `website`, select **Threads via Apify**, put `Y9xMQqberk5SPO808` in **ID run Apify lama**, then click **Jalankan Pencarian**. This queues reads of the existing run and stores results; it does not start another Actor. The token must belong to an account with access to that run. Input keyword and Actor must match the dataset exactly.
+4. For a new search, enable Apify, save settings, leave the existing-run field empty and run a keyword that is due. This consumes Apify credit. Start with one run per UTC day and the default six-hour minimum interval.
+5. Status, history and totals update every four seconds while the page is visible. The remote Actor is polled by delayed database jobs every 15 seconds, for at most 20 polls/20 minutes. Worker and cron must run continuously. If the worker is absent, a queued run is not a zero-result success.
+6. Qualified buyer posts become leads in **Kotak Masuk Prospek** (Apify filter). Other fetched posts are retained under **Review postingan ditemukan**, where you can qualify them manually. The review list also updates automatically, while preserving a review form you are actively editing. Zero new leads can mean posts were unsuitable, excluded own accounts, or already stored; the history separates those counts.
+7. Use the existing comment generator to create/edit a suggested comment for a lead, then review and copy it manually. Comments are never published automatically.
+8. Enable **Otomatis** only when ready. The scheduler checks due active keywords every minute, respecting the greater of each keyword interval and the global minimum, and the shared daily start allowance. A displayed due time is eligibility, not a promise of capacity. Python scans are manual via their source selector or `growth:scan`; they are no longer scheduled automatically.
+
+The UI shows provider-reported run usage and the last account-usage check, not a live credit balance or invoice. The account budget guard is capped at USD 4.50, and each start requests a USD 0.05 maximum total charge. These are application/provider controls, not a guarantee of a free account or total monthly invoice. Set an account spending limit in Apify Console and inspect billing, including other consumers of the same account. The web daily allowance is 1–10 starts across all keywords, counted conservatively from database attempt records and shared cache; redeploying/clearing cache does not reset recorded web attempts. The separate probe CLI defaults to one start/day (maximum two).
+
+A 402/429 pauses new starts for 24 hours. An uncertain start is never automatically repeated. Recover the actual run ID from Apify Console and import that ID with the same keyword. Do not repeatedly click new search, clear counters, or retry a start without checking Console. Importing a completed ID twice does not duplicate its data; failed imports can resume using the same ID. Stale queued/running rows become explicit failures after 30 minutes when the scheduler runs. Rollback of the tracking migration drops its settings/tracking columns; keep backups and prefer a forward fix.
+
+## Optional Python public-web workflow
+
+Quotes to Scrape is solely a permitted demo target, not a source of real commercial leads.
 
 ## Install (macOS/Linux)
 
@@ -38,7 +83,7 @@ Manage keywords via the existing Laravel UI, then click **Jalankan Pencarian**. 
 
 ## Operational boundaries
 
-- Do not add sites without permission to automate data collection. Threads public keyword discovery is **not included**.
+- Do not add sites without permission to automate data collection. Threads public keyword discovery uses the separate Apify provider, not these Python adapters.
 - `scraper/sources.json` must be controlled by server admins. Do not expose it to web edits. Avoid internal hosts, private networks, arbitrary redirect destinations and untrusted source definitions.
 - Keep workers isolated with minimal network/filesystem access. Check robots.txt and source terms. Do not attempt to bypass authentication, bot challenges or access restrictions.
 - Docker/deployment and live DB end-to-end tests remain environment-specific. `queue:work` and scheduler must stay running for automation.
@@ -49,7 +94,7 @@ Manage keywords via the existing Laravel UI, then click **Jalankan Pencarian**. 
 
 The Python pipeline now classifies retrieved posts with deterministic, word-boundary rules. Only qualified buyer requests become new leads. Rejected and uncertain posts remain stored with evidence in the existing analysis history; view and manually reclassify them under **Eksplorasi → Review postingan ditemukan**. Existing leads are preserved, including manual status and notes. Rule scores are evidence weights, not calibrated probabilities. Generic requests without a named supported service need manual review.
 
-The discovery form explicitly selects Python public web/API or the existing optional authorized Threads API. Python is the default in the UI. Threads requires a valid connected account and official keyword-search permission; no unauthorized Threads scraping is provided. Existing shared workspace permissions remain: members can review shared leads, while admins configure and launch discovery.
+The discovery form explicitly selects Python public web/API or the existing optional authorized Threads API. Apify is the default in the UI. Threads requires a valid connected account and official keyword-search permission; no unauthorized Threads scraping is provided. Existing shared workspace permissions remain: members can review shared leads, while admins configure and launch discovery.
 
 Supported admin-controlled source modes in `scraper/sources.json`:
 
@@ -60,7 +105,7 @@ Supported admin-controlled source modes in `scraper/sources.json`:
 
 Only enable sources you have permission to query. The JSON file is the source allowlist and must remain writable only by server administrators. Public-address checks reject private/loopback destinations; redirects are refused. Restrict worker outbound access at the host/firewall level as additional protection against DNS changes. The practice quote source remains disabled. No RSS feed is enabled by default: choose an authorized feed relevant to your market. Adapter failures appear in run history and do not silently become successful scans.
 
-Each enabled keyword is checked for its configured interval by `growth:scan`, dispatched from the scheduler every minute. Omitted intervals default to 60 minutes. Shared cache locks prevent overlapping execution of a keyword, and unique jobs suppress duplicate queued scans. Set `CACHE_STORE=database` for shared locks. Queue retries are bounded (three attempts, 60-second backoff); each attempt has its own run history. Python has a 90-second process timeout, the job 110 seconds, and the database queue reservation must exceed 110 seconds. If a worker is forcibly terminated, inspect any stale `running` row before retrying; automatic stale-run repair is not yet implemented.
+The optional Python command `growth:scan` checks enabled keywords for their configured interval when invoked manually. Omitted intervals default to 60 minutes. Shared cache locks prevent overlapping execution of a keyword, and unique jobs suppress duplicate queued scans. Set `CACHE_STORE=database` for shared locks. Queue retries are bounded (three attempts, 60-second backoff); each attempt has its own run history. Python has a 90-second process timeout, the job 110 seconds, and the database queue reservation must exceed 110 seconds. If a worker is forcibly terminated, inspect any stale `running` row before retrying; automatic stale-run repair is not yet implemented.
 
 ### Ubuntu deployment and recovery
 
@@ -69,7 +114,7 @@ Each enabled keyword is checked for its configured interval by `growth:scan`, di
 3. Run `composer install --no-dev --optimize-autoloader`, `npm ci`, `npm run build`, then create `scraper/.venv` and install `scraper/requirements.txt`.
 4. Only for browser mode, run `scraper/.venv/bin/python -m playwright install --with-deps chromium` using the deployment account. HTTP/API/RSS discovery does not launch a browser.
 5. Configure MySQL, `APP_ENV=production`, `APP_DEBUG=false`, `QUEUE_CONNECTION=database`, `CACHE_STORE=database`, `DB_QUEUE_RETRY_AFTER=150`, and the absolute `RISENGROWTH_PYTHON` path. Make `storage/` and `bootstrap/cache/` writable by the application account.
-6. Run `php artisan migrate --force`, `php artisan optimize`, and `php artisan growth:doctor`. This is non-destructive preflight; it does not prove external-source permissions or worker availability.
+6. Run `php artisan migrate --force`, `php artisan optimize`, and optionally `php artisan growth:doctor` for Python installations. The Python doctor checks Python prerequisites; it is not required for Apify. This is non-destructive preflight; it does not prove external-source permissions or worker availability.
 7. Supervise a database worker independently of PHP-FPM and cron. Example Supervisor stanza (adjust project/user paths):
 
 ```ini
@@ -88,7 +133,7 @@ stdout_logfile=/var/www/risengrowth/storage/logs/queue.log
 
 8. Add cron as the application account: `* * * * * cd /var/www/risengrowth && /usr/bin/php artisan schedule:run >> /var/www/risengrowth/storage/logs/scheduler.log 2>&1`. Use only one scheduler on a single-server deployment. Configure log rotation for application, queue and scheduler logs.
 9. Check `/up`, `php artisan growth:doctor`, `php artisan schedule:list`, worker process status and the Discovery run history. A healthy HTTP endpoint alone does not prove the queue is working.
-10. After deployment run `php artisan queue:restart`. For failures, inspect `php artisan queue:failed` and run history, repair source access/configuration, then use `php artisan queue:retry <id>` for the selected job. Do not flush queues or delete leads to recover. Clear stale scheduler locks with `schedule:clear-cache` only after confirming no command remains active.
+10. After deployment run `php artisan queue:restart`. For failures, inspect `php artisan queue:failed` and run history, repair source access/configuration, then use `php artisan queue:retry <id>` only for a selected Python job. For Apify, import the existing remote run ID through the website; do not restart a charged Actor. Do not flush queues or delete leads to recover. Clear stale scheduler locks with `schedule:clear-cache` only after confirming no command remains active.
 
 For local development use `php artisan queue:work database --tries=3 --timeout=110` and `php artisan schedule:work` as separate processes. Horizon/Redis is not required for this workflow.
 
@@ -105,9 +150,9 @@ The integration follows [Ollama's structured-output API](https://docs.ollama.com
 - `PythonDiscoveryPipelineTest::test_real_python_worker_fixture_reaches_the_lead_inbox` starts the actual Python interpreter, uses real extraction/JSON/qualification/persistence and renders the inbox; only its upstream HTTP is replaced with fixtures. It skips if the local venv is missing.
 - Live source access, live Ollama inference, MySQL concurrency, browser rendering and Ubuntu process supervision require environment-specific validation. Never treat mocked results as retrieved live leads.
 
-## Apify Threads feasibility probe (not automatic discovery)
+## Optional Apify command-line probe
 
-The `openclawai/threads-scraper` adapter is an experimental probe based on the publisher's documented `search_latest` input and post output. It is not connected to the scheduler or Lead Inbox until a real `website` run has returned usable posts from other public accounts and the operator has checked those URLs, usage and applicable access terms. Existing official Threads and Python workflows are unchanged.
+The `openclawai/threads-scraper` adapter is an experimental probe based on the publisher's documented `search_latest` input and post output. The adapter has returned ten public posts from other accounts in the verified `website` run. Web discovery now connects it to the database queue, scheduler, post review and Lead Inbox. The probe command below remains read-only with respect to posts/leads.
 
 Set these values in the environment of the machine executing the probe. Do not paste tokens into chat, command-line arguments, screenshots or source control:
 
@@ -155,4 +200,4 @@ php artisan test --compact tests/Feature/ApifyThreadsProviderTest.php
 php artisan test --compact
 ```
 
-References: [Actor documentation](https://apify.com/openclawai/threads-scraper), [async run API](https://docs.apify.com/api/v2/actors-runs-post), [account limits/usage](https://docs.apify.com/api/v2/users-me-limits-get). No extra Composer dependency, migration or Python package is required for this Laravel HTTP adapter.
+References: [Actor documentation](https://apify.com/openclawai/threads-scraper), [async run API](https://docs.apify.com/api/v2/actors-runs-post), [account limits/usage](https://docs.apify.com/api/v2/users-me-limits-get). No extra Composer dependency or Python package is required for the HTTP adapter. Web discovery requires the committed tracking migration.

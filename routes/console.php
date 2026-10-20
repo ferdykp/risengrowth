@@ -12,4 +12,4 @@ Schedule::command('threads:refresh-tokens')
     ->dailyAt('03:00')
     ->withoutOverlapping();
 
-Schedule::command('growth:scan')->everyMinute()->withoutOverlapping();
+Schedule::command('growth:apify-dispatch')->everyMinute()->withoutOverlapping();

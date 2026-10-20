@@ -11,6 +11,7 @@
     let polling = false;
     let failures = 0;
     let timer;
+    let reviewMarkup = null;
     const notify = (message, error = false) => {
         panel.hidden = false;
         panel.textContent = message;
@@ -24,7 +25,7 @@
     };
     try {
         const restored = JSON.parse(sessionStorage.getItem(storageKey));
-        if (restored && ['python', 'threads'].includes(restored.source) && Number.isInteger(restored.keyword_id)
+        if (restored && ['python', 'threads', 'apify'].includes(restored.source) && Number.isInteger(restored.keyword_id)
             && Number.isInteger(restored.after_id) && Number.isFinite(restored.started)) pending = restored;
     } catch (_) { /* Ignore stale browser state. */ }
     const updateButton = () => {
@@ -35,12 +36,13 @@
         const label = button.querySelector('[data-run-label]');
         if (label) label.textContent = submitting || pending ? 'Pencarian berlangsung…' : 'Jalankan Pencarian';
     };
-    const zeroMessage = source => source === 'threads'
+    const sourceLabel = source => source === 'apify' ? 'Threads via Apify' : (source === 'threads' ? 'Threads API' : 'public web / API');
+    const zeroMessage = source => source === 'apify' ? ' Tidak ada postingan yang diterima dari dataset Apify untuk keyword ini.' : source === 'threads'
         ? ' Threads API mengembalikan 0 postingan. Periksa keyword dan persetujuan akses threads_keyword_search di Meta. Akun terhubung belum membuktikan akses pencarian publik.'
         : ' Tidak ada kecocokan di sumber public web / API yang dipindai. Sumber ini tidak mencari Threads.';
     const finish = run => {
         const failed = run.status === 'failed';
-        const source = run.source_type === 'threads' ? 'Threads' : 'public web / API';
+        const source = sourceLabel(run.source_type);
         const message = failed ? `Pencarian ${source} gagal. ${run.error_summary || 'Periksa riwayat kegagalan.'}`
             : `Pencarian ${source} ${run.status === 'partial' ? 'selesai sebagian' : 'selesai'}. ${run.fetched_count} postingan diterima, ${run.added_count} lead baru.`
                 + (Number(run.fetched_count) === 0 ? zeroMessage(run.source_type) : '')
@@ -59,6 +61,7 @@
             url.searchParams.set('track_keyword', pending.keyword_id);
             url.searchParams.set('track_source', pending.source);
             url.searchParams.set('after_id', pending.after_id);
+            if (pending.run_id) url.searchParams.set('track_run', pending.run_id);
         }
         try {
             const response = await fetch(url, {headers: {Accept: 'application/json'}, cache: 'no-store', signal: AbortSignal.timeout(12000)});
@@ -69,6 +72,12 @@
             const data = await response.json();
             const rows = document.getElementById('discovery-run-rows');
             if (rows && typeof data.history_html === 'string') rows.innerHTML = data.history_html;
+            const reviews = document.getElementById('discovery-post-reviews');
+            if (reviews && typeof data.reviews_html === 'string' && data.reviews_html !== reviewMarkup
+                && !reviews.contains(document.activeElement)) {
+                reviews.innerHTML = data.reviews_html;
+                reviewMarkup = data.reviews_html;
+            }
             for (const [key, value] of Object.entries(data.metrics || {})) {
                 const metric = document.querySelector(`[data-discovery-metric="${key}"]`);
                 if (metric) metric.textContent = Number(value).toLocaleString('id-ID');
@@ -77,7 +86,7 @@
             health.textContent = 'Status diperbarui ' + new Date().toLocaleTimeString('id-ID') + ' · otomatis setiap 4 detik.';
             if (pending && data.tracked) {
                 if (['completed', 'partial', 'failed'].includes(data.tracked.status)) finish(data.tracked);
-                else notify(`Pencarian ${pending.source === 'threads' ? 'Threads' : 'public web / API'} ${data.tracked.status === 'running' ? 'sedang berjalan' : 'masih dalam antrean'}…`);
+                else notify(`Pencarian ${sourceLabel(pending.source)} ${data.tracked.status === 'running' ? 'sedang berjalan' : 'masih dalam antrean'}…`);
             } else if (pending) {
                 const waited = Date.now() - pending.started;
                 notify(waited > 120000
@@ -99,7 +108,7 @@
         const source = body.get('source');
         submitting = true;
         updateButton();
-        notify(source === 'threads' ? 'Menghubungi Threads API dan mencari postingan…' : 'Mengirim pencarian public web / API ke antrean…');
+        notify(source === 'threads' ? 'Menghubungi Threads API dan mencari postingan…' : 'Mengirim pencarian '+sourceLabel(source)+' ke antrean…');
         try {
             const response = await fetch(form.action, {method: 'POST', body, headers: {Accept: 'application/json'}, signal: AbortSignal.timeout(45000)});
             if (response.redirected || !response.headers.get('content-type')?.includes('application/json')) {
@@ -111,7 +120,7 @@
                 throw new Error(validation || data.message || 'Pencarian tidak dapat dijalankan.');
             }
             if (data.status === 'queued') {
-                pending = {source: data.source, keyword_id: data.keyword_id, after_id: data.after_id, started: Date.now()};
+                pending = {source: data.source, keyword_id: data.keyword_id, after_id: data.after_id, run_id: data.run_id, started: Date.now()};
                 save();
                 notify(data.message);
             } else if (data.status === 'completed') {

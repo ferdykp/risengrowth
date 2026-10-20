@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ApifyDiscoveryException;
 use App\Exceptions\ThreadsSearchException;
 use App\Jobs\RunPythonDiscoveryJob;
 use App\Models\SocialAccount;
+use App\Services\Discovery\RunApifyDiscovery;
 use App\Services\Discovery\RunThreadsDiscovery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -36,7 +38,8 @@ class DiscoveryRunController extends Controller
         );
 
         $data = $request->validate([
-            'source' => ['nullable', Rule::in(['python', 'threads'])],
+            'existing_run_id' => ['nullable', 'string', 'regex:/\A[a-zA-Z0-9]{1,64}\z/'],
+            'source' => ['nullable', Rule::in(['python', 'threads', 'apify'])],
             'keyword_id' => [
                 'required',
                 'integer',
@@ -68,6 +71,26 @@ class DiscoveryRunController extends Controller
         ]);
 
         $afterId = (int) DB::table('discovery_runs')->max('id');
+
+        if (($data['source'] ?? 'threads') === 'apify') {
+            try {
+                $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, $data['existing_run_id'] ?? null);
+                $message = $run->status === 'completed' ? 'Run ini sudah diimpor. Data tidak dibuat ulang.' : 'Discovery Apify masuk antrean. Status akan diperbarui otomatis.';
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => $run->status === 'completed' ? 'completed' : 'queued', 'source' => 'apify',
+                        'keyword_id' => (int) $keyword->id, 'run_id' => $run->id, 'after_id' => $afterId,
+                        'fetched' => $run->fetched_count, 'added' => $run->added_count, 'message' => $message], $run->status === 'completed' ? 200 : 202);
+                }
+
+                return redirect()->route('discovery.index')->with('success', $message);
+            } catch (ApifyDiscoveryException $exception) {
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $exception->getMessage(), 'code' => $exception->reason], 422);
+                }
+
+                return back()->withErrors(['discovery' => $exception->getMessage()]);
+            }
+        }
 
         if (($data['source'] ?? 'threads') === 'python') {
             RunPythonDiscoveryJob::dispatch($keyword->id);

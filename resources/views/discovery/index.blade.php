@@ -123,7 +123,7 @@
         {{-- PAGE HEADER                                                      --}}
         {{-- ================================================================ --}}
 
-        <header class="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <header class="mb-8 flex flex-col gap-6 lg:items-start">
 
             <div class="min-w-0">
 
@@ -146,12 +146,13 @@
             @if ($isAdmin)
 
                 <form id="discovery-run-form" method="POST" action="{{ route('discovery.run') }}"
-                    class="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+                    class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap">
                     @csrf
                     <div>
                         <label for="run-source" class="sr-only">Sumber discovery</label>
                         <select id="run-source" name="source" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
-                            <option value="threads" @selected(old('source', 'threads') === 'threads')>Threads API</option>
+                            <option value="apify" @selected(old('source', 'apify') === 'apify')>Threads via Apify</option>
+                            <option value="threads" @selected(old('source') === 'threads')>Threads API resmi</option>
                             <option value="python" @selected(old('source') === 'python')>Public web / API (Python)</option>
                         </select>
                     </div>
@@ -179,6 +180,10 @@
 
                     </div>
 
+                    <div>
+                        <label for="existing-apify-run" class="sr-only">Impor ID run Apify yang sudah ada (opsional)</label>
+                        <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="ID run Apify lama (opsional)" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                    </div>
                     <button data-unavailable="{{ $canRunDiscovery ? 'false' : 'true' }}" id="discovery-run-button" type="submit" @disabled(!$canRunDiscovery)
                         class="inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
                         <span class="material-symbols-outlined text-[19px]">
@@ -198,6 +203,28 @@
         <button type="button" id="discovery-stop-tracking" hidden class="mb-3 text-xs text-blue-700 underline">Hentikan pemantauan permintaan (tidak membatalkan job)</button>
         <p class="mb-5 text-xs text-slate-500" id="discovery-live-health">Status dan riwayat diperbarui otomatis setiap 4 detik.</p>
 
+
+        <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+            <h2 class="text-lg font-bold">Threads via Apify</h2>
+            <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'APIFY_TOKEN belum diisi di server' }} · Provider {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }} · Otomatis {{ $apifySettings->automation_enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena kuota/rate limit' : '' }}</p>
+            <p class="text-xs text-slate-600">Maksimal 10 postingan per run. Batas start {{ $apifySettings->daily_runs }}/hari UTC; sudah dicoba {{ $apifyStartsToday }}. Batas biaya per run USD {{ config('services.apify.probe_max_charge_usd') }}; budget bulanan aplikasi USD {{ config('services.apify.monthly_budget_usd') }}.</p>
+            <p class="text-xs text-slate-500">Run baru memakai kredit Apify. Untuk hasil yang sudah ada, masukkan ID run lama dan pilih keyword yang sama. Impor tidak memulai Actor baru. Saldo kredit gratis harus diperiksa di billing Apify.</p>
+            @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir dilaporkan USD {{ $apifyUsage['usage_usd'] }} / limit akun USD {{ $apifyUsage['limit_usd'] }} pada {{ $apifyUsage['checked_at'] }}. Ini bukan saldo kredit gratis real-time.</p>@endif
+            @if($isAdmin)
+                <form method="POST" action="{{ route('discovery.apify.settings') }}" class="flex flex-wrap gap-4 items-end">
+                    @csrf @method('PATCH')
+                    <label class="text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan Apify</label>
+                    <label class="text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Cari otomatis</label>
+                    <label class="text-xs">Batas start/hari UTC<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
+                    <label class="text-xs">Interval minimum (menit)<input type="number" name="min_interval_minutes" min="360" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
+                    <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan pengaturan</button>
+                </form>
+            @endif
+            <details class="text-xs text-slate-600"><summary class="cursor-pointer font-semibold">Jadwal keyword aktif</summary>
+                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? 360) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->format('d M Y H:i') }} ({{ config('app.timezone') }}). Eksekusi mengikuti kuota harian, worker, dan status otomatis.</p>@endforeach
+            </details>
+            <a href="{{ route('leads.index', ['source' => 'apify']) }}" class="inline-block text-sm font-semibold text-blue-700 underline">Buka lead hasil Apify →</a>
+        </section>
 
         {{-- ================================================================ --}}
         {{-- FLASH MESSAGES                                                   --}}
@@ -256,7 +283,7 @@
                 </div>
 
             </div>
-        @elseif (!$connectedAccount)
+        @elseif (!$connectedAccount && !$apifySettings->enabled)
             <div
                 class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
 
@@ -327,10 +354,12 @@
                 </span>
 
                 <span>
-                    Threads terhubung · Akun
-                    <span class="font-semibold text-slate-700">
-                        {{ data_get($connectedAccount, 'username') ?: 'Threads' }}
-                    </span>
+                    @if ($apifySettings->enabled)
+                        Apify {{ $apifyConfigured ? 'aktif · token tersedia' : 'aktif · token belum tersedia' }}
+                    @else
+                        Threads API terhubung · Akun
+                        <span class="font-semibold text-slate-700">{{ data_get($connectedAccount, 'username') }}</span>
+                    @endif
                 </span>
 
                 <span class="hidden text-slate-300 sm:inline">·</span>
@@ -342,7 +371,7 @@
                 <span class="hidden text-slate-300 sm:inline">·</span>
 
                 <span>
-                    Maksimal 200 hasil terfilter per pencarian
+                    Apify: maksimal 10 postingan per pencarian
                 </span>
 
             </div>
@@ -737,8 +766,8 @@
 
         <section class="mt-6 rounded-xl border border-slate-200 bg-white p-5 space-y-4">
             <h2 class="text-lg font-bold">Review postingan ditemukan</h2>
-            <p class="text-sm text-slate-600">Sumber aktif: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ?? 'Belum ada' }}.</p>
-            <p class="text-xs text-slate-500">Threads memerlukan akun dan izin pencarian API resmi. Hasil public web hanya berasal dari sumber yang dikonfigurasi admin.</p>
+            <p class="text-sm text-slate-600">Sumber Python opsional: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ?? 'Belum ada' }}.</p>
+            <p class="text-xs text-slate-500">Threads via Apify memakai token server. Opsi Threads API resmi memerlukan akun dan izin Meta. Hasil public web berasal dari sumber yang dikonfigurasi admin.</p>
             <form method="GET" action="{{ route('discovery.index') }}" class="flex flex-wrap gap-3">
                 <label class="text-sm">Kualifikasi
                     <select name="qualification" class="rounded-lg border border-slate-200 p-2">
@@ -750,24 +779,7 @@
                 </label>
                 <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Filter</button>
             </form>
-            @forelse($postReviews as $analysis)
-                <article class="border-t border-slate-100 pt-4 space-y-2">
-                    <p class="text-xs text-slate-500">{{ $analysis->output['source'] ?? $analysis->post->platform }} · {{ $analysis->output['status'] ?? $analysis->status }} · {{ $analysis->score === null ? 'Manual' : $analysis->score.'/100' }}</p>
-                    <p class="text-sm whitespace-pre-wrap break-words">{{ $analysis->post->body }}</p>
-                    <p class="text-xs text-slate-600">{{ $analysis->output['rationale'] ?? '' }}</p>
-                    @if(!empty($analysis->output['evidence']))<p class="text-xs text-slate-500 break-words">Bukti: {{ json_encode($analysis->output['evidence'], JSON_UNESCAPED_UNICODE) }}</p>@endif
-                    @if($analysis->post->permalink && parse_url($analysis->post->permalink, PHP_URL_SCHEME) === 'https')<a href="{{ $analysis->post->permalink }}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">Postingan asli ↗</a>@endif
-                    @if(!empty($analysis->output['local_ai']))<p class="text-xs text-slate-600">Saran AI (perlu review): {{ $analysis->output['local_ai']['reason'] }} {{ $analysis->output['local_ai']['follow_up'] }}</p>@endif
-                    @if(config('services.ollama.enabled'))<form method="POST" action="{{ route('discovery.posts.local', $analysis->post) }}">@csrf<button class="text-sm text-blue-700 underline">Minta saran AI lokal</button></form>@endif
-                    <form method="POST" action="{{ route('discovery.posts.review', $analysis->post) }}" class="flex flex-col sm:flex-row gap-2">
-                        @csrf @method('PATCH')
-                        <select name="qualification" aria-label="Hasil review" class="rounded-lg border border-slate-200 p-2 text-sm"><option value="qualified">Qualified</option><option value="uncertain">Perlu review</option><option value="rejected">Ditolak</option></select>
-                        <input name="reason" required maxlength="1000" placeholder="Alasan review" aria-label="Alasan review" class="min-w-0 flex-1 rounded-lg border border-slate-200 p-2 text-sm">
-                        <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan review</button>
-                    </form>
-                </article>
-            @empty<p class="text-sm text-slate-500">Belum ada hasil kualifikasi.</p>@endforelse
-            {{ $postReviews->links() }}
+            <div id="discovery-post-reviews">@include('discovery.partials.post-reviews')</div>
         </section>
     </div>
 
