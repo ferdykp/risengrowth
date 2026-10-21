@@ -20,6 +20,7 @@
       @media(min-width:1024px){.rg-content{padding-left:264px}}
       [x-cloak]{display:none!important}
     </style>
+    <link rel="stylesheet" href="{{ request()->getBaseUrl().'/workspace.css?v='.filemtime(public_path('workspace.css')) }}">
     @stack('styles')
 </head>
 <body class="antialiased min-h-screen">
@@ -78,9 +79,9 @@
       <a href="{{ route('discovery.index') }}" class="bg-slate-950 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-slate-800 inline-flex gap-1.5 items-center"><span class="material-symbols-outlined text-[17px]">travel_explore</span>Eksplorasi</a>
     </div>
   </header>
-  <main id="main-content" class="w-full min-w-0 pb-12">
-    @if(session('success'))<div role="status" class="mx-5 md:mx-8 xl:mx-10 mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{{ session('success') }}</div>@endif
-    @if($errors->any())<div role="alert" class="mx-5 md:mx-8 xl:mx-10 mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{{ $errors->first() }}</div>@endif
+  <main id="main-content" class="rg-page">
+    @if(session('success'))<div role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{{ session('success') }}</div>@endif
+    @if($errors->any())<div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><ul class="list-inside list-disc space-y-1">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     @yield('content')
   </main>
 </div>

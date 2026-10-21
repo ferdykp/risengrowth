@@ -117,7 +117,7 @@
         ];
     @endphp
 
-    <div class="mx-auto max-w-[1500px] px-5 pb-12 pt-9 lg:px-10">
+    <div class="rg-discovery">
 
         {{-- ================================================================ --}}
         {{-- PAGE HEADER                                                      --}}
@@ -149,7 +149,7 @@
                     class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap">
                     @csrf
                     <div>
-                        <label for="run-source" class="sr-only">Sumber discovery</label>
+                        <label for="run-source" class="rg-field-label">Sumber discovery</label>
                         <select id="run-source" name="source" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
                             <option value="apify" @selected(old('source', 'apify') === 'apify')>Threads via Apify</option>
                             <option value="threads" @selected(old('source') === 'threads')>Threads API resmi</option>
@@ -159,7 +159,7 @@
 
                     <div class="w-full sm:w-auto">
 
-                        <label for="run-keyword" class="sr-only">
+                        <label for="run-keyword" class="rg-field-label">
                             Pilih keyword pencarian
                         </label>
 
@@ -181,8 +181,8 @@
                     </div>
 
                     <div>
-                        <label for="existing-apify-run" class="sr-only">Impor ID run Apify yang sudah ada (opsional)</label>
-                        <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="ID run Apify lama (opsional)" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                        <label for="existing-apify-run" class="rg-field-label">ID run lama (opsional)</label>
+                        <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="Kosongkan untuk pencarian baru" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
                     </div>
                     <button data-unavailable="{{ $canRunDiscovery ? 'false' : 'true' }}" id="discovery-run-button" type="submit" @disabled(!$canRunDiscovery)
                         class="inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
@@ -204,19 +204,19 @@
         <p class="mb-5 text-xs text-slate-500" id="discovery-live-health">Status dan riwayat diperbarui otomatis setiap 4 detik.</p>
 
 
-        <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+        <section class="rg-panel mb-6 rounded-xl border border-slate-200 bg-white p-5 space-y-3">
             <h2 class="text-lg font-bold">Threads via Apify</h2>
             <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'APIFY_TOKEN belum diisi di server' }} · Provider {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }} · Otomatis {{ $apifySettings->automation_enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena kuota/rate limit' : '' }}</p>
             <p class="text-xs text-slate-600">Maksimal 10 postingan per run. Batas start {{ $apifySettings->daily_runs }}/hari UTC; sudah dicoba {{ $apifyStartsToday }}. Batas biaya per run USD {{ config('services.apify.probe_max_charge_usd') }}; budget bulanan aplikasi USD {{ config('services.apify.monthly_budget_usd') }}.</p>
             <p class="text-xs text-slate-500">Run baru memakai kredit Apify. Untuk hasil yang sudah ada, masukkan ID run lama dan pilih keyword yang sama. Impor tidak memulai Actor baru. Saldo kredit gratis harus diperiksa di billing Apify.</p>
             @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir dilaporkan USD {{ $apifyUsage['usage_usd'] }} / limit akun USD {{ $apifyUsage['limit_usd'] }} pada {{ $apifyUsage['checked_at'] }}. Ini bukan saldo kredit gratis real-time.</p>@endif
             @if($isAdmin)
-                <form method="POST" action="{{ route('discovery.apify.settings') }}" class="flex flex-wrap gap-4 items-end">
+                <form method="POST" action="{{ route('discovery.apify.settings') }}" class="rg-provider-settings">
                     @csrf @method('PATCH')
-                    <label class="text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan Apify</label>
-                    <label class="text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Cari otomatis</label>
-                    <label class="text-xs">Batas start/hari UTC<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
-                    <label class="text-xs">Interval minimum (menit)<input type="number" name="min_interval_minutes" min="360" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
+                    <label class="rg-provider-toggle text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan Apify</label>
+                    <label class="rg-provider-toggle text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Cari otomatis</label>
+                    <label class="rg-provider-number">Batas start/hari UTC<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
+                    <label class="rg-provider-number">Interval minimum (menit)<input type="number" name="min_interval_minutes" min="360" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
                     <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan pengaturan</button>
                 </form>
             @endif
@@ -230,33 +230,7 @@
         {{-- FLASH MESSAGES                                                   --}}
         {{-- ================================================================ --}}
 
-        @if ($errors->any())
 
-            <div role="alert" class="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
-
-                <span class="material-symbols-outlined text-[20px] text-red-700">
-                    error
-                </span>
-
-                <div class="min-w-0">
-
-                    <p class="text-sm font-semibold text-red-900">
-                        Pencarian tidak dapat dijalankan
-                    </p>
-
-                    <ul class="mt-2 list-inside list-disc space-y-1 text-sm leading-relaxed text-red-700">
-
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-
-                    </ul>
-
-                </div>
-
-            </div>
-
-        @endif
 
 
         {{-- ================================================================ --}}
@@ -385,7 +359,7 @@
         <section class="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
 
             @foreach ($statistics as $stat)
-                <article class="min-h-36 rounded-2xl border border-slate-200 bg-white p-5">
+                <article class="rg-panel min-h-36 rounded-2xl border border-slate-200 bg-white p-5">
 
                     <div class="flex items-start justify-between gap-3">
 
@@ -422,7 +396,7 @@
 
             {{-- CONNECTED ACCOUNTS --}}
 
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 xl:col-span-5">
+            <section class="rg-panel rounded-2xl border border-slate-200 bg-white p-6 xl:col-span-5">
 
                 <div class="mb-5 flex items-center justify-between gap-3">
 
@@ -543,7 +517,7 @@
 
             {{-- KEYWORDS --}}
 
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 xl:col-span-7">
+            <section class="rg-panel rounded-2xl border border-slate-200 bg-white p-6 xl:col-span-7">
 
                 <div class="mb-5 flex items-center justify-between gap-4">
 
@@ -630,7 +604,7 @@
         {{-- DISCOVERY HISTORY                                                 --}}
         {{-- ================================================================ --}}
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6">
+        <section class="rg-panel rounded-2xl border border-slate-200 bg-white p-6">
 
             <div class="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
@@ -764,7 +738,7 @@
 
         </section>
 
-        <section class="mt-6 rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+        <section class="rg-panel mt-6 rounded-xl border border-slate-200 bg-white p-5 space-y-4">
             <h2 class="text-lg font-bold">Review postingan ditemukan</h2>
             <p class="text-sm text-slate-600">Sumber Python opsional: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ?? 'Belum ada' }}.</p>
             <p class="text-xs text-slate-500">Threads via Apify memakai token server. Opsi Threads API resmi memerlukan akun dan izin Meta. Hasil public web berasal dari sumber yang dikonfigurasi admin.</p>
@@ -779,7 +753,7 @@
                 </label>
                 <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Filter</button>
             </form>
-            <div id="discovery-post-reviews">@include('discovery.partials.post-reviews')</div>
+            <div id="discovery-post-reviews" class="rg-review-list">@include('discovery.partials.post-reviews')</div>
         </section>
     </div>
 

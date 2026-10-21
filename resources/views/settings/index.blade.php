@@ -2,29 +2,17 @@
 @section('title', 'Pengaturan')
 @section('page_heading', 'Pengaturan')
 @section('content')
-    <div class="max-w-[1200px] mx-auto px-5 lg:px-9 py-9 space-y-6">
+    <div class="space-y-6">
         <div>
             <p class="text-[11px] font-bold tracking-[.18em] text-slate-500 uppercase">RISENGROWTH / SETTINGS</p>
             <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mt-2">Pengaturan</h1>
             <p class="mt-2 text-sm text-slate-500">Kelola profil, integrasi, dan preferensi workspace.</p>
         </div>
-        @if (session('success'))
-            <div role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm">
-                {{ session('success') }}</div>
-        @endif
-        @if ($errors->any())
-            <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-                <strong>Periksa input berikut:</strong>
-                <ul class="list-disc ml-5 mt-2">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+
+
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
             <div class="xl:col-span-7 space-y-5">
-                <section class="rounded-2xl bg-white border border-slate-200 p-6">
+                <section class="rg-panel rounded-2xl bg-white border border-slate-200 p-6">
                     <h2 class="text-lg font-bold">Profil akun</h2>
                     <p class="text-xs text-slate-500 mt-1">Informasi yang digunakan untuk masuk ke workspace.</p>
                     <form action="{{ route('settings.profile') }}" method="POST" class="mt-5 space-y-4">@csrf
@@ -44,7 +32,7 @@
                             profil</button>
                     </form>
                 </section>
-                <section class="rounded-2xl bg-white border border-slate-200 p-6">
+                <section class="rg-panel rounded-2xl bg-white border border-slate-200 p-6">
                     <h2 class="text-lg font-bold">Preferensi pencarian</h2>
                     <p class="text-xs text-slate-500 mt-1">Preferensi ini disimpan, tetapi pencarian otomatis belum
                         dijalankan sebelum integrasi Threads siap.</p>
@@ -76,7 +64,7 @@
             </div>
             <div class="xl:col-span-5 space-y-5">
 
-                <section class="rounded-2xl border border-slate-200 bg-white p-6">
+                <section class="rg-panel rounded-2xl border border-slate-200 bg-white p-6">
 
                     <div class="flex items-start justify-between gap-4">
                         <div>
@@ -217,7 +205,7 @@
                     </div>
 
                 </section>
-                <section class="rounded-2xl bg-white border border-slate-200 p-6">
+                <section class="rg-panel rounded-2xl bg-white border border-slate-200 p-6">
                     <h2 class="text-lg font-bold">AI Assistant</h2>
                     <p class="text-xs text-slate-500 mt-1">Konfigurasi server, tanpa menampilkan API key.</p>
                     <div class="mt-5 flex items-center justify-between gap-3"><span class="text-sm font-semibold">Groq
@@ -240,7 +228,7 @@
             </div>
         </div>
     </div>
-    <section class="bg-white border border-slate-200 rounded-2xl p-6 my-6">
+    <section class="rg-panel bg-white border border-slate-200 rounded-2xl p-6 my-6">
         <h2 class="font-semibold text-lg">Keamanan akun</h2>
         <p class="text-sm text-slate-500 mt-1 mb-4">Ubah password. Kamu akan diminta login ulang.</p>
         <form method="POST" action="{{ route('account.password.update') }}" class="space-y-3 max-w-md">@csrf

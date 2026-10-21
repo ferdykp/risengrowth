@@ -2,19 +2,19 @@
 @section('title', 'Kotak Masuk Prospek')
 @section('page_heading', 'Kotak Masuk Prospek')
 @section('content')
-<div class="px-5 md:px-8 py-7 max-w-[1540px] mx-auto space-y-6">
+<div class="space-y-6">
   <div class="flex flex-wrap gap-3 justify-between items-start">
     <div><div class="flex items-center gap-3 flex-wrap"><h1 class="text-2xl md:text-[28px] font-bold tracking-tight">Kotak Masuk Prospek</h1><span class="bg-secondary-fixed text-on-secondary-fixed-variant text-xs font-semibold rounded-full px-3 py-1">{{ $newLeads }} baru</span></div>
     <p class="text-sm text-on-surface-variant mt-2">Temukan dan tinjau prospek dari postingan yang sudah tersimpan.</p></div>
     <span class="inline-flex items-center gap-2 text-xs rounded-lg bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2"><span class="material-symbols-outlined text-[16px]">info</span> Discovery public web / API</span>
   </div>
   <section class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Ringkasan prospek">
-    <div class="bg-white border border-slate-200 rounded-xl p-5"><p class="text-xs text-slate-500">Total prospek</p><p class="text-3xl font-semibold mt-2">{{ number_format($totalLeads) }}</p></div>
-    <div class="bg-white border border-slate-200 rounded-xl p-5"><p class="text-xs text-slate-500">Belum ditinjau</p><p class="text-3xl font-semibold mt-2">{{ number_format($newLeads) }}</p></div>
-    <div class="bg-white border border-slate-200 rounded-xl p-5"><p class="text-xs text-slate-500">Prioritas tinggi</p><p class="text-3xl font-semibold mt-2">{{ number_format($highLeads) }}</p></div>
+    <div class="rg-panel bg-white border border-slate-200 rounded-xl p-5"><p class="text-xs text-slate-500">Total prospek</p><p class="text-3xl font-semibold mt-2">{{ number_format($totalLeads) }}</p></div>
+    <div class="rg-panel bg-white border border-slate-200 rounded-xl p-5"><p class="text-xs text-slate-500">Belum ditinjau</p><p class="text-3xl font-semibold mt-2">{{ number_format($newLeads) }}</p></div>
+    <div class="rg-panel bg-white border border-slate-200 rounded-xl p-5"><p class="text-xs text-slate-500">Prioritas tinggi</p><p class="text-3xl font-semibold mt-2">{{ number_format($highLeads) }}</p></div>
   </section>
   <section class="bg-white border border-slate-200 rounded-xl overflow-hidden">
-    <form method="GET" action="{{ route('leads.index') }}" class="p-4 md:p-5 grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(118px,auto))_auto] items-end" aria-label="Filter prospek">
+    <form method="GET" action="{{ route('leads.index') }}" class="rg-filter-grid p-5 sm:p-6" aria-label="Filter prospek">
       <label class="block"><span class="block text-xs font-semibold text-slate-600 mb-1.5">Cari postingan atau username</span><input name="q" type="search" maxlength="120" value="{{ $filters['q'] ?? '' }}" placeholder="Cari prospek..." class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"/></label>
       <label class="block"><span class="block text-xs font-semibold text-slate-600 mb-1.5">Prioritas</span><select name="priority" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm"><option value="">Semua</option>@foreach(['high'=>'Tinggi','medium'=>'Sedang','low'=>'Rendah','unscored'=>'Belum dinilai'] as $value => $label)<option value="{{ $value }}" @selected(($filters['priority'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
       <label class="block"><span class="block text-xs font-semibold text-slate-600 mb-1.5">Status</span><select name="status" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm"><option value="">Semua</option>@foreach(['new'=>'Baru','reviewing'=>'Ditinjau','qualified'=>'Potensial','contacted'=>'Dihubungi','converted'=>'Konversi','dismissed'=>'Diabaikan','saved'=>'Disimpan','completed'=>'Selesai'] as $value => $label)<option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
@@ -23,7 +23,7 @@
       <label class="block text-xs font-semibold text-slate-600">Sumber<input name="source" maxlength="100" value="{{ $filters['source'] ?? '' }}" placeholder="hackernews-official" class="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm"></label>
       <label class="block text-xs font-semibold text-slate-600">Layanan<select name="service_category" class="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm"><option value="">Semua</option>@foreach(array_keys(\App\Services\Discovery\QualifyDiscoveredPost::SERVICES) as $service)<option value="{{ $service }}" @selected(($filters['service_category'] ?? '') === $service)>{{ ucfirst(str_replace('_', ' ', $service)) }}</option>@endforeach</select></label>
       <label class="block text-xs font-semibold text-slate-600">Skor minimum<input name="min_score" type="number" min="0" max="100" value="{{ $filters['min_score'] ?? '' }}" class="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm"></label>
-      <div class="flex gap-2 items-center"><button class="rounded-lg bg-black text-white text-sm font-semibold px-4 py-2.5 hover:bg-slate-800" type="submit">Terapkan</button><a class="text-sm text-slate-500 hover:text-black underline" href="{{ route('leads.index') }}">Reset</a></div>
+      <div class="rg-filter-actions"><button class="rounded-lg bg-black text-white text-sm font-semibold px-4 py-2.5 hover:bg-slate-800" type="submit">Terapkan</button><a class="text-sm text-slate-500 hover:text-black underline" href="{{ route('leads.index') }}">Reset</a></div>
     </form>
     @if($leads->isEmpty())
       <div class="border-t border-slate-200 px-6 py-16 flex flex-col items-center text-center"><span class="material-symbols-outlined text-[42px] text-slate-400">inbox</span><h2 class="font-semibold text-lg mt-3">{{ count(array_filter($filters)) ? 'Tidak ada prospek yang cocok' : 'Belum ada prospek ditemukan' }}</h2><p class="text-sm text-slate-500 mt-2 max-w-md">{{ count(array_filter($filters)) ? 'Coba ubah pencarian atau gunakan filter lain.' : 'Postingan yang berhasil ditemukan dan dianalisis akan muncul di sini setelah integrasi discovery aktif.' }}</p>@if(count(array_filter($filters)))<a href="{{ route('leads.index') }}" class="text-sm font-semibold text-blue-700 mt-4">Hapus filter</a>@endif</div>

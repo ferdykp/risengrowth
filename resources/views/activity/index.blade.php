@@ -2,14 +2,14 @@
 @section('title', 'Aktivitas')
 @section('page_heading', 'Aktivitas')
 @section('content')
-<div class="max-w-[1450px] mx-auto px-5 lg:px-9 py-9 space-y-6">
+<div class="space-y-6">
             <div><p class="text-[11px] font-bold tracking-[.18em] text-slate-500 uppercase">RisenGrowth / Activity</p>
                 <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mt-2">Aktivitas & Engagement</h1>
                 <p class="mt-2 text-sm text-slate-500">Pantau keputusan review, percobaan pengiriman, dan aktivitas akun tanpa menganggap persetujuan sebagai publikasi.</p>
             </div>
             <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
                 @foreach([['label'=>'Keputusan review','value'=>$approvalCount],['label'=>'Percobaan engagement','value'=>$attemptCount],['label'=>'Terbit terkonfirmasi','value'=>$publishedCount],['label'=>'Gagal / belum pasti','value'=>$failedCount]] as $metric)
-                    <article class="rounded-2xl bg-white border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">{{ $metric['label'] }}</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ number_format($metric['value'], 0, ',', '.') }}</p></article>
+                    <article class="rg-panel rounded-2xl bg-white border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">{{ $metric['label'] }}</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ number_format($metric['value'], 0, ',', '.') }}</p></article>
                 @endforeach
             </div>
             <div class="flex flex-col sm:flex-row gap-3 justify-between">

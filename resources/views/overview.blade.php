@@ -2,7 +2,7 @@
 @section('title', 'Ikhtisar')
 @section('page_heading', 'Ikhtisar')
 @section('content')
-<section class="px-6 lg:px-10 pt-9 pb-5 max-w-[1500px] mx-auto">
+<section class="">
 
 <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
 
@@ -18,13 +18,13 @@
 
 </section>
 
-<section class="max-w-[1500px] mx-auto px-6 lg:px-10 pb-12 space-y-6">
+<section class="space-y-6">
 
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
     @foreach($metrics as $metric)
 
-      <article class="rounded-2xl bg-white p-5 border border-slate-200 shadow-[0_2px_14px_rgba(15,23,42,.025)] min-h-40">
+      <article class="rg-panel rounded-2xl bg-white p-5 border border-slate-200 shadow-[0_2px_14px_rgba(15,23,42,.025)] min-h-40">
 
 <div class="text-xs text-slate-500 font-semibold">{{ $metric['label'] }}</div>
 
@@ -40,7 +40,7 @@
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-5">
 
-<section class="xl:col-span-8 bg-white border border-slate-200 rounded-2xl p-6">
+<section class="rg-panel xl:col-span-8 bg-white border border-slate-200 rounded-2xl p-6">
 
 <div class="flex items-center justify-between gap-3"><div><h2 class="text-lg font-bold text-slate-950">Prospek prioritas</h2><p class="text-xs text-slate-500 mt-1">Postingan relevan berdasarkan hasil analisis.</p></div><span class="text-[11px] font-semibold text-slate-500">{{ $priorityLeads->count() }} ditampilkan</span></div>
 
@@ -56,7 +56,7 @@
 
     </section>
 
-<section class="xl:col-span-4 bg-white border border-slate-200 rounded-2xl p-6"><div class="flex items-center justify-between"><h2 class="text-lg font-bold text-slate-950">Antrean review</h2><span class="text-xs rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">{{ $pendingDrafts->count() }}</span></div><p class="text-xs text-slate-500 mt-1">Draft yang menunggu keputusanmu.</p>
+<section class="rg-panel xl:col-span-4 bg-white border border-slate-200 rounded-2xl p-6"><div class="flex items-center justify-between"><h2 class="text-lg font-bold text-slate-950">Antrean review</h2><span class="text-xs rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">{{ $pendingDrafts->count() }}</span></div><p class="text-xs text-slate-500 mt-1">Draft yang menunggu keputusanmu.</p>
 
       @forelse($pendingDrafts as $draft)
 
@@ -72,7 +72,7 @@
 
 </div>
 
-<section class="bg-white rounded-2xl border border-slate-200 p-6"><div class="flex items-center justify-between"><div><h2 class="text-lg font-bold text-slate-950">Aktivitas terbaru</h2><p class="text-xs text-slate-500 mt-1">Riwayat aktivitas sistem dan interaksi.</p></div></div>
+<section class="rg-panel bg-white rounded-2xl border border-slate-200 p-6"><div class="flex items-center justify-between"><div><h2 class="text-lg font-bold text-slate-950">Aktivitas terbaru</h2><p class="text-xs text-slate-500 mt-1">Riwayat aktivitas sistem dan interaksi.</p></div></div>
 
     @forelse($recentActivities as $activity)
 

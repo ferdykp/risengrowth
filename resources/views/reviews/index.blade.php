@@ -2,13 +2,13 @@
 @section('title', 'Antrean Review')
 @section('page_heading', 'Antrean Review')
 @section('content')
-<div class="max-w-[1450px] mx-auto px-5 lg:px-9 py-9 space-y-6">
+<div class="space-y-6">
             <div><p class="text-[11px] font-bold tracking-[.18em] text-slate-500 uppercase">RisenGrowth / Review</p>
                 <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mt-2">Antrean Review</h1>
                 <p class="mt-2 text-sm text-slate-500">Periksa isi komentar sebelum disetujui. Persetujuan tidak otomatis mengirim komentar.</p>
             </div>
-            @if(session('success'))<div role="status" class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>@endif
-            @if($errors->any())<div role="alert" class="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">{{ $errors->first() }}</div>@endif
+
+
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 @foreach(['draft'=>'Draft', 'pending_review'=>'Menunggu Review', 'approved'=>'Disetujui', 'rejected'=>'Ditolak'] as $key=>$label)
                     <a href="{{ route('reviews.index', ['status'=>$key]) }}" class="rounded-2xl bg-white border p-4 hover:border-slate-400 {{ $filter===$key ? 'border-slate-900' : 'border-slate-200' }}">
@@ -58,7 +58,7 @@
                 </div>
                 @if($drafts->hasPages())<div class="p-5 border-t border-slate-100">{{ $drafts->links() }}</div>@endif
             </section>
-            <section class="bg-white rounded-2xl border border-slate-200 p-5"><h2 class="font-bold">Riwayat keputusan terbaru</h2>
+            <section class="rg-panel bg-white rounded-2xl border border-slate-200 p-5"><h2 class="font-bold">Riwayat keputusan terbaru</h2>
                 @forelse($recentApprovals as $approval)
                     <div class="flex flex-wrap items-center justify-between border-b last:border-0 border-slate-100 py-3 gap-2 text-sm"><span>{{ '@'.($approval->draft?->lead?->post?->username ?: 'pengguna') }} · {{ $approval->decision === 'approved' ? 'Disetujui' : 'Ditolak' }}</span><span class="text-xs text-slate-500">{{ $approval->decided_at?->format('d M Y, H:i') }}</span></div>
                 @empty<p class="mt-3 text-sm text-slate-500">Belum ada keputusan review.</p>@endforelse

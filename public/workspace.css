@@ -1,0 +1,138 @@
+:root {
+    --rg-gutter: 20px;
+    --rg-space: 24px;
+    --rg-border: #e2e8f0;
+}
+
+.rg-page {
+    width: 100%;
+    max-width: 1500px;
+    min-width: 0;
+    margin-inline: auto;
+    padding: 28px var(--rg-gutter) 48px;
+}
+
+.rg-page > :not([hidden]) + :not([hidden]) {
+    margin-top: var(--rg-space);
+}
+
+.rg-page h1 {
+    font-size: clamp(26px, 2.5vw, 34px);
+    line-height: 1.25;
+    letter-spacing: -.035em;
+    overflow-wrap: anywhere;
+}
+
+.rg-page h2 { line-height: 1.4; }
+.rg-page p { line-height: 1.65; }
+.rg-page :where(.grid, .flex) > :where(div, section, article, form, label) { min-width: 0; }
+.rg-panel { padding: 20px; border-radius: 16px; }
+.rg-page :where(section, article) { scroll-margin-top: 92px; }
+.rg-page .overflow-x-auto { position: relative; max-width: 100%; }
+.rg-page :where(table) { border-collapse: collapse; }
+.rg-page :where(th) { font-weight: 600; white-space: nowrap; }
+.rg-page :where(td) { vertical-align: top; }
+.rg-page :where(td, th) { line-height: 1.5; }
+.rg-page :where(label) { line-height: 1.5; }
+
+:where(.rg-page, .rg-auth) :where(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    min-width: 0;
+    min-height: 44px;
+    max-width: 100%;
+    background-color: white;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+:where(.rg-page, .rg-auth) :where(select) { padding-right: 32px; }
+:where(.rg-page, .rg-auth) :where(textarea) { min-height: 100px; resize: vertical; }
+:where(.rg-page, .rg-auth) :where(input[type="checkbox"], input[type="radio"]) {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: #0f172a;
+}
+
+:where(.rg-page, .rg-auth) :where(button[class*="bg-"], a[class*="bg-"]) {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1.4;
+}
+
+:where(.rg-page, .rg-auth) :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+}
+
+.rg-discovery > header { margin-bottom: 24px; }
+.rg-discovery #discovery-run-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: end;
+    gap: 16px;
+}
+.rg-discovery #discovery-run-form > div { width: 100%; }
+.rg-discovery #discovery-run-form :where(input, select) { min-width: 0; width: 100%; }
+.rg-discovery #discovery-run-form label:not(.sr-only), .rg-field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+.rg-provider-settings {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: end;
+    gap: 20px;
+    border-top: 1px solid var(--rg-border);
+    padding-top: 20px;
+    margin-top: 20px;
+}
+.rg-provider-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.rg-provider-number { display: grid; gap: 8px; font-size: 12px; font-weight: 600; color: #475569; }
+.rg-provider-number input { width: 100%; margin: 0; font-weight: 400; }
+.rg-review-list { display: grid; gap: 16px; }
+.rg-review-card { padding: 20px; border: 1px solid var(--rg-border); border-radius: 12px; background: #fff; }
+.rg-review-card > * + * { margin-top: 12px; }
+.rg-review-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+.rg-review-form :where(input, select, button) { width: 100%; }
+.rg-review-evidence { background: #f8fafc; padding: 12px; border-radius: 8px; }
+.rg-filter-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: end; }
+.rg-filter-grid label { display: block; }
+.rg-filter-grid input, .rg-filter-grid select { width: 100%; }
+.rg-filter-actions { display: flex; align-items: center; gap: 16px; min-height: 44px; }
+.rg-comment-options { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: end; }
+.rg-comment-options label, .rg-comment-options select { width: 100%; }
+.rg-auth { padding: 24px 16px; min-height: 100svh; }
+.rg-auth > main { padding: 28px 24px; margin-block: auto; }
+.rg-auth p { line-height: 1.65; }
+.rg-auth h1 { line-height: 1.3; letter-spacing: -.025em; }
+.rg-auth form > label + input { margin-top: 8px; }
+
+@media (min-width: 640px) {
+    :root { --rg-gutter: 28px; }
+    .rg-page { padding-top: 32px; }
+    .rg-panel { padding: 24px; }
+    .rg-discovery #discovery-run-form, .rg-filter-grid, .rg-provider-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rg-review-form { grid-template-columns: 160px minmax(0, 1fr); }
+    .rg-review-form button { grid-column: 2; justify-self: end; width: auto; }
+    .rg-comment-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rg-auth > main { padding: 36px; }
+}
+
+@media (min-width: 1280px) {
+    :root { --rg-gutter: 36px; }
+    .rg-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .rg-discovery #discovery-run-form { grid-template-columns: 1fr 1.1fr 1.2fr auto; }
+    .rg-provider-settings { grid-template-columns: 1fr 1fr 1fr 1fr auto; }
+    .rg-review-form { grid-template-columns: 160px minmax(0, 1fr) auto; }
+    .rg-review-form button { grid-column: auto; width: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rg-nav, #rg-sidebar { transition: none; }
+}
