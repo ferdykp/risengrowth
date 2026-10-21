@@ -334,4 +334,40 @@ class ApifyThreadsProviderTest extends TestCase
 
         Http::assertSentCount(3);
     }
+
+    #[TestWith(['website', 'hint', "No results for 'website' on Threads.", true])]
+    #[TestWith(['different', 'hint', "No results for 'website' on Threads.", false])]
+    #[TestWith(['website', 'error', "No results for 'website' on Threads.", false])]
+    #[TestWith(['website', 'hint', 'Search failed upstream', false])]
+    public function test_only_exact_empty_search_hint_for_requested_keyword_is_accepted(string $sourceInput, string $type, string $message, bool $accepted): void
+    {
+        Http::fake([
+            'api.apify.com/v2/actor-runs/run123' => Http::response($this->runPayload()),
+            'api.apify.com/v2/actors/openclawai~threads-scraper' => Http::response(['data' => ['id' => 'actor123']]),
+            'api.apify.com/v2/datasets/dataset123/items*' => Http::response([['platform' => 'threads', 'item_type' => $type,
+                'mode' => 'search_latest', 'source_input' => $sourceInput, 'error_message' => $message, 'item_id' => null, 'url' => null]]),
+        ]);
+        if (! $accepted) {
+            $this->expectException(ApifyDiscoveryException::class);
+        }
+
+        $result = app(ApifyThreadsProvider::class)->posts('run123', []);
+
+        $this->assertSame([], $result['posts']);
+        $this->assertSame(1, $result['empty_notices']);
+    }
+
+    public function test_empty_search_notice_cannot_hide_contradictory_post_rows(): void
+    {
+        Http::fake([
+            'api.apify.com/v2/actor-runs/run123' => Http::response($this->runPayload()),
+            'api.apify.com/v2/actors/openclawai~threads-scraper' => Http::response(['data' => ['id' => 'actor123']]),
+            'api.apify.com/v2/datasets/dataset123/items*' => Http::response([$this->entry(), ['platform' => 'threads', 'item_type' => 'hint',
+                'mode' => 'search_latest', 'source_input' => 'website', 'error_message' => "No results for 'website' on Threads."]]),
+        ]);
+        $this->expectException(ApifyDiscoveryException::class);
+        $this->expectExceptionMessage('sekaligus');
+
+        app(ApifyThreadsProvider::class)->posts('run123', []);
+    }
 }

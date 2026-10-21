@@ -20,6 +20,18 @@ class PostNormalizer
             && ($entry['error_message'] ?? null) === 'Free Apify plan: this actor returns up to 10 results per run, without comment replies. Upgrade to any paid Apify plan for unlimited results and all modes.';
     }
 
+    /** @param array<string, mixed> $entry */
+    public function isApifyEmptySearchNotice(array $entry, string $keyword): bool
+    {
+        return ($entry['platform'] ?? null) === 'threads'
+            && ($entry['item_type'] ?? null) === 'hint'
+            && ($entry['mode'] ?? null) === 'search_latest'
+            && ($entry['source_input'] ?? null) === $keyword
+            && ($entry['item_id'] ?? null) === null
+            && ($entry['url'] ?? null) === null
+            && ($entry['error_message'] ?? null) === "No results for '".$keyword."' on Threads.";
+    }
+
     /** @param array<string, mixed> $entry
      * @param  array<int, string>  $excludedUsernames
      * @return array{platform: string, external_post_id: string, username: string, body: string, permalink: string, posted_at: ?string}|null

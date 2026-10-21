@@ -87,7 +87,7 @@ class ApifyThreadsProvider
     }
 
     /** @param array<int, string> $excludedUsernames
-     * @return array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int}
+     * @return array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int, empty_notices: int}
      */
     public function posts(string $runId, array $excludedUsernames, string $keyword = 'website'): array
     {
@@ -104,6 +104,7 @@ class ApifyThreadsProvider
         $duplicates = 0;
         $notices = 0;
         $postRows = 0;
+        $emptyNotices = 0;
         foreach ($entries as $entry) {
             if (! is_array($entry)) {
                 throw new ApifyDiscoveryException('INVALID_DATASET', 'Baris dataset bukan objek.');
@@ -111,6 +112,13 @@ class ApifyThreadsProvider
             if ($this->normalizer->isApifyPlanNotice($entry)) {
                 if (++$notices > 1) {
                     throw new ApifyDiscoveryException('INVALID_DATASET', 'Dataset berisi informasi paket yang berulang.');
+                }
+
+                continue;
+            }
+            if ($this->normalizer->isApifyEmptySearchNotice($entry, $keyword)) {
+                if (++$emptyNotices > 1) {
+                    throw new ApifyDiscoveryException('INVALID_DATASET', 'Informasi hasil kosong berulang dalam dataset.');
                 }
 
                 continue;
@@ -136,7 +144,11 @@ class ApifyThreadsProvider
             $posts[$post['external_post_id']] = $post;
         }
 
-        return ['posts' => array_values($posts), 'excluded_own' => $own, 'duplicates' => $duplicates, 'received' => count($entries), 'plan_notices' => $notices];
+        if ($emptyNotices > 0 && $postRows > 0) {
+            throw new ApifyDiscoveryException('INVALID_DATASET', 'Dataset berisi postingan sekaligus informasi tidak ada hasil.');
+        }
+
+        return ['posts' => array_values($posts), 'excluded_own' => $own, 'duplicates' => $duplicates, 'received' => count($entries), 'plan_notices' => $notices, 'empty_notices' => $emptyNotices];
     }
 
     private function client(): PendingRequest

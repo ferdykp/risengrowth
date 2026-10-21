@@ -191,7 +191,7 @@ class RunApifyDiscovery
         }
     }
 
-    /** @param array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int} $result */
+    /** @param array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int, empty_notices: int} $result */
     private function persist(object $run, array $result): void
     {
         DB::transaction(function () use ($run, $result): void {
@@ -232,7 +232,7 @@ class RunApifyDiscovery
             }
             DB::table('search_keywords')->where('id', $run->search_keyword_id)->update(['last_ran_at' => now(), 'updated_at' => now()]);
             DB::table('discovery_runs')->where('id', $run->id)->update(['status' => 'completed',
-                'fetched_count' => $result['received'] - $result['plan_notices'], 'added_count' => $added,
+                'fetched_count' => $result['received'] - $result['plan_notices'] - $result['empty_notices'], 'added_count' => $added,
                 'relevant_count' => $qualified, 'excluded_own_count' => $result['excluded_own'], 'uncertain_count' => $uncertain,
                 'rejected_count' => $rejected, 'error_code' => null, 'error_summary' => null, 'provider_poll_after' => null,
                 'finished_at' => now(), 'updated_at' => now()]);

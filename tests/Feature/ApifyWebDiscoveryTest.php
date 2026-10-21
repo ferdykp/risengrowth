@@ -331,4 +331,26 @@ class ApifyWebDiscoveryTest extends TestCase
             ->assertUnprocessable()->assertJsonPath('code', 'RUN_ALREADY_LINKED');
         $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'search_keyword_id' => $keyword->id, 'status' => 'completed']);
     }
+
+    public function test_verified_no_results_hint_completes_web_import_with_zero_posts(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $keyword = $this->keyword($admin, 'butuh website');
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $this->fakeResults([['platform' => 'threads', 'item_type' => 'hint', 'item_id' => null, 'url' => null,
+            'mode' => 'search_latest', 'source_input' => 'butuh website',
+            'error_message' => "No results for 'butuh website' on Threads.", 'scraped_at' => '2026-10-21T03:06:22.897962+00:00']]);
+        $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, 'remote123');
+        DB::table('discovery_runs')->where('id', $run->id)->update(['status' => 'failed', 'error_code' => 'ACTOR_OUTPUT_ERROR']);
+        $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id, 'existing_run_id' => 'remote123'])
+            ->assertAccepted()->assertJsonPath('run_id', $run->id);
+        app(RunApifyDiscovery::class)->advance($run->id);
+
+        $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'completed', 'fetched_count' => 0, 'added_count' => 0, 'error_code' => null]);
+        $this->assertDatabaseCount('discovered_posts', 0);
+        $this->assertDatabaseCount('leads', 0);
+        $this->actingAs($admin)->getJson(route('discovery.index', ['track_source' => 'apify', 'track_keyword' => $keyword->id, 'track_run' => $run->id]))
+            ->assertOk()->assertJsonPath('tracked.status', 'completed')->assertJsonPath('tracked.fetched_count', 0);
+        Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+    }
 }
