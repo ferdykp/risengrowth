@@ -51,10 +51,20 @@ class RunApifyDiscovery
                 throw new ApifyDiscoveryException('INVALID_KEYWORD', 'Keyword tidak ditemukan atau tidak aktif.');
             }
             if ($existingRunId !== null) {
-                $existing = DB::table('discovery_runs')->where('provider_run_id', $existingRunId)->first();
+                $existing = DB::table('discovery_runs')->where('provider_run_id', $existingRunId)->lockForUpdate()->first();
                 if ($existing) {
                     if ((int) $existing->search_keyword_id !== $keywordId) {
-                        throw new ApifyDiscoveryException('RUN_ALREADY_LINKED', 'Run ini sudah terkait keyword lain.');
+                        $canCorrectKeyword = $existing->source_type === 'apify'
+                            && $existing->status === 'failed' && $existing->error_code === 'WRONG_QUERY'
+                            && (int) $existing->added_count === 0
+                            && ! DB::table('discovery_run_posts')->where('discovery_run_id', $existing->id)->exists()
+                            && ! AiAnalysis::where('output->run_id', $existing->id)->exists();
+                        if (! $canCorrectKeyword) {
+                            throw new ApifyDiscoveryException('RUN_ALREADY_LINKED', 'Run ini sudah terkait keyword lain. Hanya impor gagal karena keyword tidak cocok dan tanpa hasil tersimpan yang dapat dikoreksi.');
+                        }
+                        DB::table('discovery_runs')->where('id', $existing->id)->update([
+                            'search_keyword_id' => $keywordId, 'keyword_snapshot' => $keyword->phrase, 'updated_at' => now(),
+                        ]);
                     }
                     if ($existing->status === 'failed') {
                         DB::table('discovery_runs')->where('id', $existing->id)->update(['status' => 'queued',

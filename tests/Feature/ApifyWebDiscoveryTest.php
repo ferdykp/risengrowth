@@ -295,4 +295,40 @@ class ApifyWebDiscoveryTest extends TestCase
             ->assertUnprocessable()->assertJsonPath('code', 'DAILY_LIMIT');
         Http::assertNothingSent();
     }
+
+    public function test_failed_wrong_keyword_import_can_be_corrected_from_web_without_starting_actor(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $wrongKeyword = $this->keyword($admin, 'butuh website');
+        $correctKeyword = $this->keyword($admin);
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $this->fakeResults([$this->postEntry('1', 'Need a website for my business')]);
+        $run = app(RunApifyDiscovery::class)->enqueue($wrongKeyword->id, 'remote123');
+        app(RunApifyDiscovery::class)->advance($run->id);
+        $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'failed', 'error_code' => 'WRONG_QUERY']);
+
+        $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $correctKeyword->id, 'existing_run_id' => 'remote123'])
+            ->assertAccepted()->assertJsonPath('run_id', $run->id);
+        app(RunApifyDiscovery::class)->advance($run->id);
+
+        $this->assertDatabaseCount('discovery_runs', 1);
+        $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'completed', 'search_keyword_id' => $correctKeyword->id, 'keyword_snapshot' => 'website', 'provider_run_id' => 'remote123']);
+        $this->assertDatabaseCount('leads', 1);
+        Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+    }
+
+    public function test_successful_import_cannot_be_reassigned_to_a_different_keyword(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $keyword = $this->keyword($admin);
+        $other = $this->keyword($admin, 'butuh website');
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $this->fakeResults([$this->postEntry('1', 'Need a website for my business')]);
+        $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, 'remote123');
+        app(RunApifyDiscovery::class)->advance($run->id);
+
+        $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $other->id, 'existing_run_id' => 'remote123'])
+            ->assertUnprocessable()->assertJsonPath('code', 'RUN_ALREADY_LINKED');
+        $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'search_keyword_id' => $keyword->id, 'status' => 'completed']);
+    }
 }
