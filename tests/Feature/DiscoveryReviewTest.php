@@ -21,7 +21,7 @@ class DiscoveryReviewTest extends TestCase
 
         $this->actingAs($user)->get(route('discovery.index', ['qualification' => 'uncertain']))
             ->assertOk()->assertSee('Website project details')
-            ->assertSee('action="'.route('discovery.posts.review', $post).'"', false);
+            ->assertSee('action="'.route('discovery.posts.review', $post, false).'"', false);
         $this->patch(route('discovery.posts.review', $post), ['qualification' => 'qualified', 'reason' => 'Confirmed buyer request'])
             ->assertRedirect()->assertSessionHasNoErrors();
 
