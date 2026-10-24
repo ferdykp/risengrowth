@@ -216,12 +216,13 @@
                     <label class="rg-provider-toggle text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan Apify</label>
                     <label class="rg-provider-toggle text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Cari otomatis</label>
                     <label class="rg-provider-number">Batas start/hari UTC<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
-                    <label class="rg-provider-number">Interval minimum (menit)<input type="number" name="min_interval_minutes" min="360" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
+                    <label class="rg-provider-number">Interval minimum otomatis (menit)<input type="number" name="min_interval_minutes" min="1" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
                     <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan pengaturan</button>
                 </form>
             @endif
+            <p class="text-xs text-slate-500">Pencarian manual bisa dijalankan sebelum jadwal otomatis, selama tidak ada proses aktif dan batas run/budget masih tersedia. Jadwal otomatis memakai interval yang lebih besar antara pengaturan di sini dan interval di Kata Kunci. Interval keyword yang kosong mengikuti pengaturan ini.</p>
             <details class="text-xs text-slate-600"><summary class="cursor-pointer font-semibold">Jadwal keyword aktif</summary>
-                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? 360) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Eksekusi mengikuti kuota harian, worker, dan status otomatis.</p>@endforeach
+                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? $apifySettings->min_interval_minutes) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Eksekusi mengikuti kuota harian, worker, dan status otomatis.</p>@endforeach
             </details>
             <a href="{{ route('leads.index', ['source' => 'apify']) }}" class="inline-block text-sm font-semibold text-blue-700 underline">Buka lead hasil Apify →</a>
         </section>

@@ -74,7 +74,7 @@ class DiscoveryRunController extends Controller
 
         if (($data['source'] ?? 'threads') === 'apify') {
             try {
-                $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, $data['existing_run_id'] ?? null);
+                $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, $data['existing_run_id'] ?? null, manual: true);
                 $message = $run->status === 'completed' ? 'Run ini sudah diimpor. Data tidak dibuat ulang.' : 'Discovery Apify masuk antrean. Status akan diperbarui otomatis.';
                 if ($request->expectsJson()) {
                     return response()->json(['status' => $run->status === 'completed' ? 'completed' : 'queued', 'source' => 'apify',

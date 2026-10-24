@@ -14,7 +14,7 @@ class ApifySettingsController extends Controller
         $data = $request->validate([
             'enabled' => ['required', 'boolean'], 'automation_enabled' => ['required', 'boolean'],
             'daily_runs' => ['required', 'integer', 'between:1,10'],
-            'min_interval_minutes' => ['required', 'integer', 'between:360,10080'],
+            'min_interval_minutes' => ['required', 'integer', 'between:1,10080'],
         ]);
         $data['automation_enabled'] = (bool) $data['enabled'] && (bool) $data['automation_enabled'];
         DB::table('discovery_provider_settings')->where('id', 1)->update($data + ['updated_at' => now()]);

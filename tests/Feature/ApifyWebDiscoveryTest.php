@@ -166,7 +166,7 @@ class ApifyWebDiscoveryTest extends TestCase
         $this->actingAs($admin)->patch(route('discovery.apify.settings'), ['enabled' => 1, 'automation_enabled' => 1, 'daily_runs' => 2, 'min_interval_minutes' => 360])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'enabled' => true, 'automation_enabled' => true, 'daily_runs' => 2]);
-        $this->patch(route('discovery.apify.settings'), ['enabled' => 1, 'automation_enabled' => 1, 'daily_runs' => 99, 'min_interval_minutes' => 1])
+        $this->patch(route('discovery.apify.settings'), ['enabled' => 1, 'automation_enabled' => 1, 'daily_runs' => 99, 'min_interval_minutes' => 0])
             ->assertSessionHasErrors(['daily_runs', 'min_interval_minutes']);
         $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'daily_runs' => 2]);
     }
@@ -376,5 +376,90 @@ class ApifyWebDiscoveryTest extends TestCase
         $this->assertDatabaseCount('ai_analyses', 5);
         $this->assertDatabaseCount('leads', 5);
         Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+    }
+
+    public function test_manual_search_does_not_wait_for_automatic_interval_but_reuses_an_active_run(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $keyword = $this->keyword($admin);
+        $this->enable(true);
+        DB::table('discovery_provider_settings')->where('id', 1)->update(['daily_runs' => 3]);
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $old = app(RunApifyDiscovery::class)->enqueue($keyword->id);
+        DB::table('discovery_runs')->where('id', $old->id)->update(['status' => 'completed', 'provider_run_id' => 'oldremote', 'provider_attempted_at' => now()]);
+
+        $this->artisan('growth:apify-dispatch')->assertSuccessful();
+        $this->assertDatabaseCount('discovery_runs', 1);
+        $first = $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id])->assertAccepted();
+        $this->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id])->assertAccepted()->assertJsonPath('run_id', $first->json('run_id'));
+
+        $this->assertDatabaseCount('discovery_runs', 2);
+        $this->assertDatabaseHas('discovery_runs', ['id' => $first->json('run_id'), 'status' => 'queued', 'provider_run_id' => null]);
+        Http::assertNothingSent();
+    }
+
+    public function test_manual_search_still_respects_daily_quota_after_a_recent_run(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $keyword = $this->keyword($admin);
+        $this->enable();
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $old = app(RunApifyDiscovery::class)->enqueue($keyword->id);
+        DB::table('discovery_runs')->where('id', $old->id)->update(['status' => 'completed', 'provider_run_id' => 'oldremote', 'provider_attempted_at' => now()]);
+
+        $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id])
+            ->assertUnprocessable()->assertJsonPath('code', 'DAILY_LIMIT');
+
+        $this->assertDatabaseCount('discovery_runs', 1);
+        Http::assertNothingSent();
+    }
+
+    public function test_one_minute_automatic_interval_is_accepted_and_inherited_by_an_unset_keyword(): void
+    {
+        $this->freezeTime();
+        $admin = User::factory()->admin()->create();
+        $keyword = $this->keyword($admin);
+        $keyword->update(['interval_minutes' => null]);
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $this->actingAs($admin)->patch(route('discovery.apify.settings'), [
+            'enabled' => 1, 'automation_enabled' => 1, 'daily_runs' => 3, 'min_interval_minutes' => 1,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $old = app(RunApifyDiscovery::class)->enqueue($keyword->id);
+        DB::table('discovery_runs')->where('id', $old->id)->update(['status' => 'completed', 'provider_run_id' => 'oldremote', 'provider_attempted_at' => now()]);
+
+        $this->artisan('growth:apify-dispatch')->assertSuccessful();
+        $this->assertDatabaseCount('discovery_runs', 1);
+        $this->travel(61)->seconds();
+        $this->artisan('growth:apify-dispatch')->assertSuccessful();
+
+        $this->assertDatabaseCount('discovery_runs', 2);
+        $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'min_interval_minutes' => 1]);
+        Http::assertNothingSent();
+    }
+
+    public function test_longer_keyword_interval_still_applies_to_automation(): void
+    {
+        $this->freezeTime();
+        $keyword = $this->keyword(User::factory()->admin()->create());
+        $this->enable(true);
+        DB::table('discovery_provider_settings')->where('id', 1)->update(['daily_runs' => 3, 'min_interval_minutes' => 1]);
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $old = app(RunApifyDiscovery::class)->enqueue($keyword->id);
+        DB::table('discovery_runs')->where('id', $old->id)->update(['status' => 'completed', 'provider_run_id' => 'oldremote', 'provider_attempted_at' => now()]);
+        $this->travel(61)->seconds();
+
+        $this->artisan('growth:apify-dispatch')->assertSuccessful();
+
+        $this->assertDatabaseCount('discovery_runs', 1);
+        Http::assertNothingSent();
+    }
+
+    public function test_keyword_can_use_one_minute_interval_but_not_zero(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $payload = ['phrase' => 'butuh landing page', 'platform' => 'threads', 'category' => 'direct_demand', 'search_type' => 'RECENT', 'enabled' => 1, 'interval_minutes' => 1];
+        $this->actingAs($admin)->post(route('keywords.store'), $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('search_keywords', ['phrase' => $payload['phrase'], 'interval_minutes' => 1]);
+        $this->post(route('keywords.store'), array_replace($payload, ['phrase' => 'butuh aplikasi', 'interval_minutes' => 0]))->assertSessionHasErrors('interval_minutes');
     }
 }

@@ -39,7 +39,7 @@ class DispatchApifyDiscovery extends Command
         foreach ($keywords as $keyword) {
             $latest = DB::table('discovery_runs')->where('source_type', 'apify')->where('search_keyword_id', $keyword->id)->latest('id')->first();
             $lastAttempt = $latest?->created_at;
-            if ($lastAttempt && Carbon::parse($lastAttempt)->addMinutes(max($config->min_interval_minutes, $keyword->interval_minutes ?? 360))->isFuture()) {
+            if ($lastAttempt && Carbon::parse($lastAttempt)->addMinutes(max($config->min_interval_minutes, $keyword->interval_minutes ?? $config->min_interval_minutes))->isFuture()) {
                 continue;
             }
             try {

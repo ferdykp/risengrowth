@@ -98,7 +98,7 @@ class DiscoveryController extends Controller
         $lastScans = DB::table('discovery_runs')->where('source_type', 'apify')->select('search_keyword_id')->selectRaw('MAX(created_at) as last_attempt')->groupBy('search_keyword_id')->pluck('last_attempt', 'search_keyword_id');
         foreach ($keywords as $keyword) {
             $last = $lastScans[$keyword->id] ?? null;
-            $nextScans[$keyword->id] = $last ? Carbon::parse($last)->addMinutes(max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? 360)) : now();
+            $nextScans[$keyword->id] = $last ? Carbon::parse($last)->addMinutes(max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? $apifySettings->min_interval_minutes)) : now();
         }
 
         return view('discovery.index', [
