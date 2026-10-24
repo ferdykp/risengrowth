@@ -3,7 +3,7 @@
         <section class="rg-panel rounded-2xl border border-slate-200 bg-white space-y-5">
             <div>
                 <h2 class="text-lg font-bold">Tempel postingan, dapatkan ide komentar</h2>
-                <p class="mt-2 text-sm text-slate-500">Nemu postingan di Threads? Salin teksnya ke sini. Kita buat balasan bahasa Indonesia yang santai dan nyambung.</p>
+                <p class="mt-2 text-sm text-slate-500">Nemu postingan di Threads? Salin teksnya ke sini. Kita buat balasan yang spesifik, santai, dan nyambung dengan isi postingan.</p>
             </div>
             <form id="quick-comment-form" method="POST" action="{{ route('comments.suggestions.store', [], false) }}" class="space-y-4">
                 @csrf
@@ -24,6 +24,11 @@
                         <option value="friendly" @selected(old('tone') === 'friendly')>Friendly — ramah dan ringan</option>
                     </select>
                 </div>
+                <label class="flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+                    <input type="hidden" name="allow_brand" value="0">
+                    <input type="checkbox" name="allow_brand" value="1" class="mt-1" @checked((bool) old('allow_brand', true))>
+                    <span>Boleh menyebut {{ config('services.comment_brand.mention') }} atau {{ config('services.comment_brand.website') }} bila relevan.<span class="mt-1 block text-xs text-slate-500">Tidak dipaksakan. Untuk diskusi umum dan promosi orang lain, balasan tetap tanpa promosi.</span></span>
+                </label>
                 <button type="submit" class="w-full rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white">Buat ide komentar</button>
                 <p class="text-xs text-slate-500">{{ $aiConfigured ? 'Teks postingan akan diproses oleh provider AI yang dikonfigurasi.' : 'AI belum dikonfigurasi. Saran template gratis tetap tersedia.' }} Komentar bisa diedit dan disalin; tidak dikirim otomatis.</p>
             </form>

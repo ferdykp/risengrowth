@@ -28,9 +28,10 @@ class CommentSuggestionController extends Controller
                     $fail('Gunakan link postingan HTTPS dari threads.net atau threads.com.');
                 }
             }],
+            'allow_brand' => ['nullable', 'boolean'],
             'tone' => ['required', Rule::in(['casual', 'friendly'])],
         ]);
-        $result = $generator->generate($data['post_text'], $data['tone']);
+        $result = $generator->generate($data['post_text'], $data['tone'], (bool) ($data['allow_brand'] ?? true));
         DB::table('comment_suggestions')->insert([
             'user_id' => $request->user()->id, 'post_text' => $data['post_text'], 'post_url' => $data['post_url'] ?? null,
             'tone' => $data['tone'], 'provider' => $result['provider'], 'body' => $result['body'], 'created_at' => now(), 'updated_at' => now(),

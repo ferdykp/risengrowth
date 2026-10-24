@@ -44,10 +44,10 @@ class LocalAiAssistant
         return $validation->fails() ? null : $validation->validated();
     }
 
-    public function draft(string $body, string $language, string $tone): ?string
+    public function draft(string $body, string $language, string $tone, ?string $instructions = null): ?string
     {
         $result = $this->request($body,
-            'Write one concise helpful RisenDev response draft in '.($language === 'en' ? 'English' : 'Indonesian').'. Tone: '.$tone.'. Reference the actual need; ask one useful question. No invented experience, guarantees, links or pressure. Never claim to have sent it. Return JSON with only a body string under 450 characters.',
+            $instructions ?? 'Write one concise helpful RisenDev response draft in '.($language === 'en' ? 'English' : 'Indonesian').'. Tone: '.$tone.'. Reference the actual need; ask one useful question. No invented experience, guarantees, links or pressure. Never claim to have sent it. Return JSON with only a body string under 450 characters.',
             ['type' => 'object', 'additionalProperties' => false, 'properties' => ['body' => ['type' => 'string']], 'required' => ['body']]);
         $draft = $result['body'] ?? null;
 

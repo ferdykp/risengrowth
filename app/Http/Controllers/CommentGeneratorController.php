@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CommentDraft;
 use App\Models\Lead;
+use App\Services\Discovery\GenerateCommentSuggestion;
 use App\Services\Discovery\LocalAiAssistant;
 use App\Services\Discovery\QualifyDiscoveredPost;
 use Illuminate\Http\RedirectResponse;
@@ -63,6 +64,14 @@ class CommentGeneratorController extends Controller
         $provider = $data['provider'] ?? 'groq';
         $language = $data['language'] ?? 'id';
         if (in_array($provider, ['ollama', 'template'], true)) {
+            if ($language === 'id' && in_array($data['variant_key'], ['casual', 'friendly'], true)) {
+                $result = app(GenerateCommentSuggestion::class)->generate($lead->post->body, $data['variant_key'], true, $provider);
+                $this->saveRevision($lead->id, $data['variant_key'], $result['body'], $request->user()->id);
+
+                return redirect()->route('comments.index', ['lead' => $lead->id])->with('success', $result['provider'] === 'template'
+                    ? 'Draft template tersimpan. Review dan edit sebelum publikasi manual.'
+                    : 'Draft tersimpan. Review dan edit sebelum publikasi manual.');
+            }
             $draft = $provider === 'ollama' ? app(LocalAiAssistant::class)->draft($lead->post->body, $language, $data['variant_key']) : null;
             if ($draft === null) {
                 $category = app(QualifyDiscoveredPost::class)->classify($lead->post->body, '')['service_category'];
@@ -88,6 +97,14 @@ class CommentGeneratorController extends Controller
             return back()->withErrors(['ai' => 'Batas generate tercapai. Coba beberapa saat lagi.']);
         }
         RateLimiter::hit($key, 3600);
+        if ($language === 'id' && in_array($data['variant_key'], ['casual', 'friendly'], true)) {
+            $result = app(GenerateCommentSuggestion::class)->generate($lead->post->body, $data['variant_key'], true, 'groq');
+            $this->saveRevision($lead->id, $data['variant_key'], $result['body'], $request->user()->id);
+
+            return redirect()->route('comments.index', ['lead' => $lead->id])->with('success', $result['provider'] === 'template'
+                ? 'AI belum tersedia. Draft template tersimpan untuk direview.'
+                : 'Draft tersimpan. Review dan edit sebelum publikasi manual.');
+        }
         try {
             $response = Http::withToken(config('services.groq.key'))
                 ->acceptJson()->timeout(25)->connectTimeout(5)->retry(2, 500, throw: false)

@@ -81,4 +81,34 @@ class CommentGeneratorTest extends TestCase
         $this->assertDatabaseCount('comment_approvals', 0);
         $this->assertDatabaseCount('engagement_attempts', 0);
     }
+
+    public function test_saved_lead_uses_the_same_natural_style_and_approved_brand_reference(): void
+    {
+        $this->actingAs(User::factory()->create());
+        config()->set('services.groq.key', 'test-key');
+        $lead = $this->lead();
+        $body = 'Katalog yang ringan di HP bisa jadi awal yang pas. Kalau perlu partner, kami di @risendev bisa diskusi kebutuhannya dulu.';
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $body]]]])]);
+
+        $this->post(route('comments.generate'), ['lead_id' => $lead->id, 'variant_key' => 'casual', 'provider' => 'groq', 'language' => 'id'])
+            ->assertRedirect(route('comments.index', ['lead' => $lead->id]));
+
+        $this->assertDatabaseHas('comment_drafts', ['lead_id' => $lead->id, 'body' => $body, 'status' => 'draft']);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'concrete response to one detail'));
+        $this->assertDatabaseCount('engagement_attempts', 0);
+    }
+
+    public function test_explicit_template_selection_does_not_use_groq_even_if_configured(): void
+    {
+        $this->actingAs(User::factory()->create());
+        config()->set('services.groq.key', 'test-key');
+        Http::preventStrayRequests();
+        $lead = $this->lead();
+
+        $this->post(route('comments.generate'), ['lead_id' => $lead->id, 'variant_key' => 'friendly', 'provider' => 'template', 'language' => 'id'])
+            ->assertRedirect(route('comments.index', ['lead' => $lead->id]));
+
+        $this->assertDatabaseHas('comment_drafts', ['lead_id' => $lead->id, 'status' => 'draft']);
+        Http::assertNothingSent();
+    }
 }

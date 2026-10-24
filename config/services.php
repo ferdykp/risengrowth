@@ -49,6 +49,11 @@ return [
         'excluded_usernames' => array_values(array_filter(array_map('trim', explode(',', env('THREADS_EXCLUDED_USERNAMES', 'risencode.dev,risendev'))))),
     ],
 
+    'comment_brand' => [
+        'mention' => '@risendev',
+        'website' => 'https://risencode.dev',
+    ],
+
     'groq' => [
         'key' => env('GROQ_API_KEY'),
         'model' => env('GROQ_MODEL', 'openai/gpt-oss-20b'),

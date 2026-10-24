@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Discovery\GenerateCommentSuggestion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -45,7 +46,7 @@ class CommentSuggestionTest extends TestCase
         $this->assertDatabaseCount('discovered_posts', 0);
         $this->assertDatabaseCount('comment_drafts', 0);
         $this->assertDatabaseCount('engagement_attempts', 0);
-        $this->get(route('comments.index'))->assertOk()->assertSee('Boleh tahu, websitenya')->assertSee('Salin komentar')->assertSee('Template gratis');
+        $this->get(route('comments.index'))->assertOk()->assertSee('Komentar (boleh diedit)')->assertSee('Salin komentar')->assertSee('Template gratis');
         Http::assertNothingSent();
     }
 
@@ -88,7 +89,9 @@ class CommentSuggestionTest extends TestCase
         ])->assertRedirect();
 
         $body = DB::table('comment_suggestions')->value('body');
-        $this->assertStringContainsString('pilihan paket', $body);
+        $this->assertNotEmpty($body);
+        $this->assertStringNotContainsString('@risendev', $body);
+        $this->assertStringNotContainsString('risencode.dev', $body);
         $this->assertStringNotContainsString('butuh website', $body);
         Http::assertNothingSent();
     }
@@ -154,5 +157,80 @@ class CommentSuggestionTest extends TestCase
 
         $this->assertDatabaseHas('comment_suggestions', ['provider' => 'ollama', 'body' => $comment]);
         Http::assertSentCount(1);
+    }
+
+    #[TestWith(['Kalau fokusnya katalog, alur ke WhatsApp bisa dibuat singkat. Kami di @risendev bisa diskusi kebutuhannya dulu.'])]
+    #[TestWith(['Katalog yang ringan di HP bisa jadi langkah awal. Info tim kami ada di https://risencode.dev kalau mau ngobrol soal kebutuhannya.'])]
+    public function test_one_approved_brand_reference_is_allowed_for_relevant_buyer_posts(string $body): void
+    {
+        config()->set('services.groq.key', 'test-private-key');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $body]]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload())->assertRedirect();
+
+        $this->assertDatabaseHas('comment_suggestions', ['provider' => 'groq', 'body' => $body]);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'https://risencode.dev')
+            && str_contains($request['messages'][0]['content'], 'do not pretend to be an independent customer'));
+    }
+
+    public function test_turning_off_branding_rejects_branded_ai_output_and_returns_an_unbranded_suggestion(): void
+    {
+        config()->set('services.groq.key', 'test-private-key');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'Kalau perlu website, kami di @risendev bisa bantu diskusi dulu.']]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload() + ['allow_brand' => 0])->assertRedirect();
+
+        $record = DB::table('comment_suggestions')->first();
+        $this->assertSame('template', $record->provider);
+        $this->assertStringNotContainsString('@risendev', $record->body);
+        $this->assertStringNotContainsString('risencode.dev', $record->body);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'unbranded response'));
+    }
+
+    #[TestWith(['Lagi buka jasa pembuatan website landing page mulai 300rb.'])]
+    #[TestWith(['Cari web developer untuk lowongan full time di kantor kami.'])]
+    #[TestWith(['Kenapa website sekarang banyak animasinya ya?'])]
+    #[TestWith(['Butuh website katalog untuk usaha, tolong tanpa promosi.'])]
+    public function test_brand_is_not_included_without_a_suitable_offer_context(string $post): void
+    {
+        config()->set('services.groq.key', 'test-private-key');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'Kami di @risendev juga menyediakan website untuk usaha.']]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), [
+            'post_text' => $post, 'tone' => 'casual', 'allow_brand' => 1,
+        ])->assertRedirect();
+
+        $body = DB::table('comment_suggestions')->value('body');
+        $this->assertStringNotContainsString('@risendev', $body);
+        $this->assertStringNotContainsString('risencode.dev', $body);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'unbranded response'));
+    }
+
+    #[TestWith(['Kami di @risendev bisa diskusi. Info kami di https://risencode.dev juga ya.'])]
+    #[TestWith(['Coba diskusi kebutuhan websitenya lewat https://evil.example dulu.'])]
+    #[TestWith(['Untuk kebutuhan website itu bisa ngobrol dengan @akunlain.'])]
+    #[TestWith(['Info kami di https://risencode.dev/portfolio-rahasia untuk lihat contohnya.'])]
+    #[TestWith(['Untuk info kami kunjungi https://risencode.dev.evil.example ya.'])]
+    public function test_unapproved_or_excessive_references_are_not_saved_as_ai_suggestions(string $body): void
+    {
+        config()->set('services.groq.key', 'test-private-key');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $body]]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload())->assertRedirect();
+
+        $this->assertDatabaseHas('comment_suggestions', ['provider' => 'template']);
+        $saved = DB::table('comment_suggestions')->value('body');
+        $this->assertNotSame($body, $saved);
+        $this->assertStringNotContainsString('evil.example', $saved);
+        $this->assertStringNotContainsString('@akunlain', $saved);
+    }
+
+    public function test_templates_are_contextual_without_generic_openers_and_do_not_call_ai_when_selected(): void
+    {
+        config()->set('services.groq.key', 'test-private-key');
+        $result = app(GenerateCommentSuggestion::class)->generate($this->payload()['post_text'], 'casual', false, 'template');
+
+        $this->assertSame('template', $result['provider']);
+        $this->assertStringContainsString('WhatsApp', $result['body']);
+        $this->assertStringNotContainsString('Menarik nih', $result['body']);
+        $this->assertStringNotContainsString('Boleh tahu', $result['body']);
+        $this->assertStringNotContainsString('@risendev', $result['body']);
+        Http::assertNothingSent();
     }
 }
