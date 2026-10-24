@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ApifySettingsController;
 use App\Http\Controllers\CommentGeneratorController;
+use App\Http\Controllers\CommentSuggestionController;
 use App\Http\Controllers\DiscoveredPostReviewController;
 use App\Http\Controllers\DiscoveryController;
 use App\Http\Controllers\DiscoveryRunController;
@@ -64,6 +65,8 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
 
     Route::get('/comments', [CommentGeneratorController::class, 'index'])->name('comments.index');
     Route::post('/comments', [CommentGeneratorController::class, 'store'])->middleware('throttle:account-mutations')->name('comments.store');
+    Route::post('/comments/suggestions', [CommentSuggestionController::class, 'store'])->middleware('throttle:ai-generation')->name('comments.suggestions.store');
+    Route::patch('/comments/suggestions/{suggestion}', [CommentSuggestionController::class, 'update'])->whereNumber('suggestion')->middleware('throttle:account-mutations')->name('comments.suggestions.update');
     Route::post('/comments/generate', [CommentGeneratorController::class, 'generate'])->middleware('throttle:ai-generation')->name('comments.generate');
 
     Route::get('/reviews', [ReviewQueueController::class, 'index'])->name('reviews.index');

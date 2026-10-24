@@ -5,6 +5,8 @@
 <div class="flex flex-wrap justify-between gap-4 items-start"><div><div class="text-[11px] tracking-[.16em] font-bold text-slate-500 uppercase">RisenGrowth / AI Studio</div><h1 class="text-3xl font-bold tracking-tight mt-2">Generator Komentar</h1><p class="text-sm text-slate-500 mt-2">Siapkan balasan yang relevan untuk prospek. Semua draft wajib direview.</p></div><span class="rounded-full px-3 py-2 text-xs font-semibold {{ $aiConfigured ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800' }}">{{ $aiConfigured ? 'AI terkonfigurasi' : 'Template gratis tersedia' }}</span></div>
 
 
+            @include('comments.partials.quick-generator')
+            <details @if($selectedLead) open @endif class="rg-panel rounded-2xl border border-slate-200 bg-white"><summary class="cursor-pointer text-base font-semibold">Buat komentar dari prospek tersimpan</summary><div class="mt-6">
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
                 <div class="xl:col-span-7 space-y-5">
                     <section class="rg-panel bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 space-y-5">
@@ -24,6 +26,7 @@
                     @forelse($drafts as $draft)<article class="border border-slate-200 rounded-xl p-4 space-y-3"><div class="flex gap-2 flex-wrap justify-between items-center"><div class="font-semibold text-sm">{{ '@'.($draft->lead?->post?->username ?: 'pengguna') }}</div><span class="text-[11px] bg-slate-100 text-slate-700 rounded-full px-2 py-1">{{ ucfirst($draft->status) }} · v{{ $draft->revision }}</span></div><p class="text-sm text-slate-700 whitespace-pre-line break-words">{{ $draft->body }}</p><div class="flex flex-wrap justify-between items-center gap-2"><span class="text-xs text-slate-500">{{ ucfirst($draft->variant_key) }} · {{ $draft->created_at?->diffForHumans() }}</span><button type="button" class="text-xs font-semibold text-blue-700 hover:underline" data-copy="{{ $draft->id }}">Salin komentar</button></div><textarea class="hidden" id="draft-{{ $draft->id }}">{{ $draft->body }}</textarea></article>@empty<div class="border border-dashed border-slate-200 rounded-xl p-10 text-center text-sm text-slate-500">Belum ada draft komentar.</div>@endforelse
                 </section>
             </div>
+</div></details>
 @endsection
 
 @push('scripts')

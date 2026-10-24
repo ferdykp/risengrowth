@@ -624,6 +624,7 @@
                 {{-- HISTORY FILTER --}}
 
                 <form method="GET" action="{{ route('discovery.index') }}" class="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="prefer_indonesian" value="{{ (bool) ($filters['prefer_indonesian'] ?? true) ? '1' : '0' }}">
 
                     <label for="discovery-status" class="sr-only">
                         Status
@@ -740,9 +741,11 @@
 
         <section class="rg-panel mt-6 rounded-xl border border-slate-200 bg-white p-5 space-y-4">
             <h2 class="text-lg font-bold">Review postingan ditemukan</h2>
+            <p class="text-xs text-slate-500">Prioritas Indonesia memakai perkiraan kata dalam teks, bukan lokasi akun. Tidak menyaring hasil dari negara lain. Untuk pencarian, coba keyword spesifik seperti “butuh website”, “cari jasa website”, atau “website toko”.</p>
             <p class="text-sm text-slate-600">Sumber Python opsional: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ?? 'Belum ada' }}.</p>
             <p class="text-xs text-slate-500">Threads via Apify memakai token server. Opsi Threads API resmi memerlukan akun dan izin Meta. Hasil public web berasal dari sumber yang dikonfigurasi admin.</p>
             <form method="GET" action="{{ route('discovery.index') }}" class="flex flex-wrap gap-3">
+                <label class="flex items-center gap-2 text-sm text-slate-600"><input type="hidden" name="prefer_indonesian" value="0"><input type="checkbox" name="prefer_indonesian" value="1" @checked((bool) ($filters['prefer_indonesian'] ?? true))> Utamakan bahasa Indonesia</label>
                 <label class="text-sm">Kualifikasi
                     <select name="qualification" class="rounded-lg border border-slate-200 p-2">
                         <option value="">Semua postingan</option>

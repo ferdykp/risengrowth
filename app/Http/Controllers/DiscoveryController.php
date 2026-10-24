@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiAnalysis;
 use App\Services\Discovery\ApifyDiscoverySettings;
+use App\Services\Discovery\IndonesianPostPreference;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class DiscoveryController extends Controller
     public function __invoke(Request $request): View|JsonResponse
     {
         $filters = $request->validate([
+            'prefer_indonesian' => ['nullable', 'boolean'],
             'status' => ['nullable', Rule::in(['queued', 'running', 'completed', 'failed', 'partial'])],
             'keyword' => ['nullable', 'integer', 'min:1'],
             'after_id' => ['nullable', 'integer', 'min:0'],
@@ -55,6 +57,9 @@ class DiscoveryController extends Controller
 
         $analyses = AiAnalysis::query()->with('post')
             ->whereIn('id', AiAnalysis::query()->selectRaw('MAX(id)')->groupBy('discovered_post_id'));
+        if ((bool) ($filters['prefer_indonesian'] ?? true)) {
+            app(IndonesianPostPreference::class)->prioritize($analyses, 'ai_analyses.discovered_post_id');
+        }
         if (filled($filters['qualification'] ?? null)) {
             $analyses->where('output->status', $filters['qualification']);
         }

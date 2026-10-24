@@ -25,6 +25,7 @@ class CommentGeneratorController extends Controller
 
         return view('comments.index', [
             'selectedLead' => $selectedLead,
+            'suggestions' => DB::table('comment_suggestions')->where('user_id', $request->user()->id)->orderByDesc('id')->paginate(5, ['*'], 'suggestions_page')->withQueryString(),
             'leads' => Lead::query()->with('post')->latest()->limit(50)->get(),
             'drafts' => $selectedLead
                 ? $selectedLead->commentDrafts()->with('lead.post')->limit(15)->get()

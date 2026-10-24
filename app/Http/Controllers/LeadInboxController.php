@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Services\Discovery\IndonesianPostPreference;
 use App\Services\Discovery\QualifyDiscoveredPost;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class LeadInboxController extends Controller
     public function __invoke(Request $request): View
     {
         $filters = $request->validate([
+            'prefer_indonesian' => ['nullable', 'boolean'],
             'q' => ['nullable', 'string', 'max:120'],
             'priority' => ['nullable', Rule::in(['high', 'medium', 'low', 'unscored'])],
             'status' => ['nullable', Rule::in(['new', 'reviewing', 'qualified', 'contacted', 'converted', 'dismissed', 'saved', 'completed'])],
@@ -49,6 +51,10 @@ class LeadInboxController extends Controller
         }
         if (filled($filters['min_score'] ?? null)) {
             $query->where('score', '>=', $filters['min_score']);
+        }
+
+        if ((bool) ($filters['prefer_indonesian'] ?? true)) {
+            app(IndonesianPostPreference::class)->prioritize($query, 'leads.discovered_post_id');
         }
 
         match ($filters['sort'] ?? 'newest') {
