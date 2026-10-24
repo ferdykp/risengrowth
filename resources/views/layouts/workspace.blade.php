@@ -36,7 +36,9 @@
     ];
 @endphp
 <div class="lg:hidden sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur rg-shadow px-4 py-3 flex items-center justify-between">
-  <a href="{{ route('overview') }}" class="font-extrabold tracking-tight">RisenGrowth <span class="text-[10px] font-semibold bg-slate-100 rounded px-1.5 py-1">Pro AI</span></a>
+  <div class="min-w-0"><a href="{{ route('overview') }}" class="font-extrabold tracking-tight">RisenGrowth <span class="text-[10px] font-semibold bg-slate-100 rounded px-1.5 py-1">Pro AI</span></a>
+    @include('components.wib-clock', ['compact' => true])
+  </div>
   <button type="button" id="rg-menu-toggle" aria-controls="rg-sidebar" aria-expanded="false" aria-label="Buka navigasi" class="inline-flex items-center justify-center rounded-xl border border-slate-200 w-10 h-10"><span class="material-symbols-outlined">menu</span></button>
 </div>
 <div id="rg-overlay" class="hidden fixed inset-0 bg-slate-950/30 z-40 lg:hidden" aria-hidden="true"></div>
@@ -75,6 +77,7 @@
   <header class="hidden lg:flex sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-100 h-[72px] items-center justify-between px-6 xl:px-10">
     <div class="flex gap-2 items-center text-sm text-slate-500"><span>Workspace</span><span class="text-slate-300">/</span><strong class="text-slate-900 font-semibold">@yield('page_heading','Ikhtisar')</strong></div>
     <div class="flex items-center gap-3">
+      @include('components.wib-clock', ['compact' => false])
       <a href="{{ route('leads.index') }}" class="hidden xl:inline-flex text-sm text-slate-500 hover:text-slate-950 items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">search</span>Cari prospek</a>
       <a href="{{ route('discovery.index') }}" class="bg-slate-950 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-slate-800 inline-flex gap-1.5 items-center"><span class="material-symbols-outlined text-[17px]">travel_explore</span>Eksplorasi</a>
     </div>
@@ -88,6 +91,7 @@
 <script>
 (function(){const b=document.getElementById('rg-menu-toggle'),n=document.getElementById('rg-sidebar'),o=document.getElementById('rg-overlay');function set(open){n.classList.toggle('-translate-x-full',!open);o.classList.toggle('hidden',!open);b.setAttribute('aria-expanded',String(open));}b.addEventListener('click',()=>set(b.getAttribute('aria-expanded')!=='true'));o.addEventListener('click',()=>set(false));document.addEventListener('keydown',e=>{if(e.key==='Escape')set(false)});})();
 </script>
+<script src="{{ request()->getBaseUrl().'/wib-clock.js?v='.filemtime(public_path('wib-clock.js')) }}" defer></script>
 @stack('scripts')
 </body>
 </html>

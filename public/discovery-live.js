@@ -83,7 +83,7 @@
                 if (metric) metric.textContent = Number(value).toLocaleString('id-ID');
             }
             failures = 0;
-            health.textContent = 'Status diperbarui ' + new Date().toLocaleTimeString('id-ID') + ' · otomatis setiap 4 detik.';
+            health.textContent = 'Status diperbarui ' + new Date().toLocaleTimeString('id-ID', {timeZone: 'Asia/Jakarta', hourCycle: 'h23'}).replace(/\./g, ':') + ' WIB' + ' · otomatis setiap 4 detik.';
             if (pending && data.tracked) {
                 if (['completed', 'partial', 'failed'].includes(data.tracked.status)) finish(data.tracked);
                 else notify(`Pencarian ${sourceLabel(pending.source)} ${data.tracked.status === 'running' ? 'sedang berjalan' : 'masih dalam antrean'}…`);

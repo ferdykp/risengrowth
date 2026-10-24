@@ -60,7 +60,7 @@
             </section>
             <section class="rg-panel bg-white rounded-2xl border border-slate-200 p-5"><h2 class="font-bold">Riwayat keputusan terbaru</h2>
                 @forelse($recentApprovals as $approval)
-                    <div class="flex flex-wrap items-center justify-between border-b last:border-0 border-slate-100 py-3 gap-2 text-sm"><span>{{ '@'.($approval->draft?->lead?->post?->username ?: 'pengguna') }} · {{ $approval->decision === 'approved' ? 'Disetujui' : 'Ditolak' }}</span><span class="text-xs text-slate-500">{{ $approval->decided_at?->format('d M Y, H:i') }}</span></div>
+                    <div class="flex flex-wrap items-center justify-between border-b last:border-0 border-slate-100 py-3 gap-2 text-sm"><span>{{ '@'.($approval->draft?->lead?->post?->username ?: 'pengguna') }} · {{ $approval->decision === 'approved' ? 'Disetujui' : 'Ditolak' }}</span><span class="text-xs text-slate-500">{{ $approval->decided_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</span></div>
                 @empty<p class="mt-3 text-sm text-slate-500">Belum ada keputusan review.</p>@endforelse
             </section>
         </div>

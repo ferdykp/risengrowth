@@ -34,7 +34,7 @@
                 <article class="rg-panel rounded-2xl border border-slate-200 bg-white space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $suggestion->provider === 'template' ? 'Template gratis' : 'Saran AI' }} · {{ $suggestion->tone === 'casual' ? 'Santai' : 'Friendly' }}</span>
-                        <span class="text-xs text-slate-400">{{ \Illuminate\Support\Carbon::parse($suggestion->created_at)->format('d M, H:i') }}</span>
+                        <span class="text-xs text-slate-400">{{ \Illuminate\Support\Carbon::parse($suggestion->created_at, 'UTC')->copy()->timezone('Asia/Jakarta')->format('d M, H:i \W\I\B') }}</span>
                     </div>
                     <details class="text-sm"><summary class="cursor-pointer font-semibold text-slate-600">Lihat postingan asal</summary><p class="mt-3 whitespace-pre-wrap break-words text-slate-600">{{ $suggestion->post_text }}</p></details>
                     @if($suggestion->post_url)<a href="{{ $suggestion->post_url }}" target="_blank" rel="noopener noreferrer" class="inline-block text-sm font-semibold text-blue-700 underline">Buka postingan di Threads ↗</a>@endif

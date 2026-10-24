@@ -65,7 +65,7 @@
                                 <td class="whitespace-nowrap py-4 text-slate-500">
 
                                     @if (data_get($run, 'created_at'))
-                                        {{ \Illuminate\Support\Carbon::parse(data_get($run, 'created_at'))->format('d M Y, H:i') }}
+                                        {{ \Illuminate\Support\Carbon::parse(data_get($run, 'created_at'), 'UTC')->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}
                                     @else
                                         -
                                     @endif

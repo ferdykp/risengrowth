@@ -42,7 +42,7 @@
                                     @if($approval->reason)<p class="text-xs text-slate-500 mt-2">Alasan: {{ $approval->reason }}</p>@endif
                                     @if($approval->draft?->lead)<a href="{{ route('leads.show', $approval->draft->lead) }}" class="inline-block mt-2 text-xs font-semibold text-blue-700 hover:underline">Detail prospek →</a>@endif
                                 </div>
-                                <div class="sm:text-right shrink-0"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {{ $approval->decision === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">{{ $approval->decision === 'approved' ? 'Disetujui' : 'Ditolak' }}</span><p class="text-xs text-slate-500 mt-2">{{ $approval->decided_at?->format('d M Y, H:i') }}</p></div>
+                                <div class="sm:text-right shrink-0"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {{ $approval->decision === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">{{ $approval->decision === 'approved' ? 'Disetujui' : 'Ditolak' }}</span><p class="text-xs text-slate-500 mt-2">{{ $approval->decided_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</p></div>
                             </article>
                         @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada keputusan review.</p> @endforelse
                     </div>
@@ -67,7 +67,7 @@
                                     @if($attempt->failure_summary)<p class="mt-2 text-xs text-rose-700">{{ $attempt->failure_summary }}</p>@endif
                                     @if($attempt->draft?->lead)<a class="inline-block mt-2 text-xs font-semibold text-blue-700 hover:underline" href="{{ route('leads.show', $attempt->draft->lead) }}">Detail prospek →</a>@endif
                                 </div>
-                                <div class="shrink-0 sm:text-right"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {{ $confirmed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700' }}">{{ $label }}</span><p class="text-xs text-slate-500 mt-2">{{ $attempt->attempted_at?->format('d M Y, H:i') ?: $attempt->created_at?->format('d M Y, H:i') }}</p></div>
+                                <div class="shrink-0 sm:text-right"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {{ $confirmed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700' }}">{{ $label }}</span><p class="text-xs text-slate-500 mt-2">{{ $attempt->attempted_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') ?: $attempt->created_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</p></div>
                             </article>
                         @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada percobaan engagement tercatat.</p> @endforelse
                     </div>
@@ -79,7 +79,7 @@
                     <div class="p-5 border-b border-slate-100"><h2 id="events-heading" class="text-base font-bold">Log aktivitas</h2><p class="text-xs text-slate-500 mt-1">Peristiwa internal yang tersimpan untuk akun ini.</p></div>
                     <div class="divide-y divide-slate-100">
                         @forelse($events as $event)
-                            <article class="p-5 flex flex-wrap items-center justify-between gap-2"><div><p class="text-sm font-semibold">{{ str_replace('_', ' ', $event->event) }}</p>@if($event->lead_id)<a href="{{ route('leads.show', $event->lead_id) }}" class="text-xs text-blue-700 hover:underline">Detail prospek →</a>@endif</div><time class="text-xs text-slate-500" datetime="{{ $event->created_at?->toIso8601String() }}">{{ $event->created_at?->format('d M Y, H:i') }}</time></article>
+                            <article class="p-5 flex flex-wrap items-center justify-between gap-2"><div><p class="text-sm font-semibold">{{ str_replace('_', ' ', $event->event) }}</p>@if($event->lead_id)<a href="{{ route('leads.show', $event->lead_id) }}" class="text-xs text-blue-700 hover:underline">Detail prospek →</a>@endif</div><time class="text-xs text-slate-500" datetime="{{ $event->created_at?->toIso8601String() }}">{{ $event->created_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</time></article>
                         @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada aktivitas tercatat.</p> @endforelse
                     </div>
                     @if($events->hasPages())<div class="p-5 border-t border-slate-100">{{ $events->links() }}</div>@endif

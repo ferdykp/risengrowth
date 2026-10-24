@@ -207,9 +207,9 @@
         <section class="rg-panel mb-6 rounded-xl border border-slate-200 bg-white p-5 space-y-3">
             <h2 class="text-lg font-bold">Threads via Apify</h2>
             <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'APIFY_TOKEN belum diisi di server' }} · Provider {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }} · Otomatis {{ $apifySettings->automation_enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena kuota/rate limit' : '' }}</p>
-            <p class="text-xs text-slate-600">Maksimal 10 postingan per run. Batas start {{ $apifySettings->daily_runs }}/hari UTC; sudah dicoba {{ $apifyStartsToday }}. Batas biaya per run USD {{ config('services.apify.probe_max_charge_usd') }}; budget bulanan aplikasi USD {{ config('services.apify.monthly_budget_usd') }}.</p>
+            <p class="text-xs text-slate-600">Maksimal 10 postingan per run. Batas start {{ $apifySettings->daily_runs }}/hari UTC (reset 07.00 WIB); sudah dicoba {{ $apifyStartsToday }}. Batas biaya per run USD {{ config('services.apify.probe_max_charge_usd') }}; budget bulanan aplikasi USD {{ config('services.apify.monthly_budget_usd') }}.</p>
             <p class="text-xs text-slate-500">Run baru memakai kredit Apify. Untuk hasil yang sudah ada, masukkan ID run lama dan pilih keyword yang sama. Impor tidak memulai Actor baru. Saldo kredit gratis harus diperiksa di billing Apify.</p>
-            @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir dilaporkan USD {{ $apifyUsage['usage_usd'] }} / limit akun USD {{ $apifyUsage['limit_usd'] }} pada {{ $apifyUsage['checked_at'] }}. Ini bukan saldo kredit gratis real-time.</p>@endif
+            @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir dilaporkan USD {{ $apifyUsage['usage_usd'] }} / limit akun USD {{ $apifyUsage['limit_usd'] }} pada {{ \Illuminate\Support\Carbon::parse($apifyUsage['checked_at'])->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Ini bukan saldo kredit gratis real-time.</p>@endif
             @if($isAdmin)
                 <form method="POST" action="{{ route('discovery.apify.settings') }}" class="rg-provider-settings">
                     @csrf @method('PATCH')
@@ -221,7 +221,7 @@
                 </form>
             @endif
             <details class="text-xs text-slate-600"><summary class="cursor-pointer font-semibold">Jadwal keyword aktif</summary>
-                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? 360) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->format('d M Y H:i') }} ({{ config('app.timezone') }}). Eksekusi mengikuti kuota harian, worker, dan status otomatis.</p>@endforeach
+                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? 360) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Eksekusi mengikuti kuota harian, worker, dan status otomatis.</p>@endforeach
             </details>
             <a href="{{ route('leads.index', ['source' => 'apify']) }}" class="inline-block text-sm font-semibold text-blue-700 underline">Buka lead hasil Apify →</a>
         </section>
@@ -471,7 +471,7 @@
 
                                     Token berlaku sampai:
 
-                                    {{ \Illuminate\Support\Carbon::parse($expiresAt)->format('d M Y, H:i') }}
+                                    {{ \Illuminate\Support\Carbon::parse($expiresAt, 'UTC')->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}
 
                                 </p>
                             @endif
@@ -742,7 +742,7 @@
         <section class="rg-panel mt-6 rounded-xl border border-slate-200 bg-white p-5 space-y-4">
             <h2 class="text-lg font-bold">Review postingan ditemukan</h2>
             <p class="text-xs text-slate-500">Prioritas Indonesia memakai perkiraan kata dalam teks, bukan lokasi akun. Tidak menyaring hasil dari negara lain. Untuk pencarian, coba keyword spesifik seperti “butuh website”, “cari jasa website”, atau “website toko”.</p>
-            <p class="text-sm text-slate-600">Sumber Python opsional: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ?? 'Belum ada' }}.</p>
+            <p class="text-sm text-slate-600">Sumber Python opsional: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ? \Illuminate\Support\Carbon::parse($lastSuccessfulScan, 'UTC')->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') : 'Belum ada' }}.</p>
             <p class="text-xs text-slate-500">Threads via Apify memakai token server. Opsi Threads API resmi memerlukan akun dan izin Meta. Hasil public web berasal dari sumber yang dikonfigurasi admin.</p>
             <form method="GET" action="{{ route('discovery.index') }}" class="flex flex-wrap gap-3">
                 <label class="flex items-center gap-2 text-sm text-slate-600"><input type="hidden" name="prefer_indonesian" value="0"><input type="checkbox" name="prefer_indonesian" value="1" @checked((bool) ($filters['prefer_indonesian'] ?? true))> Utamakan bahasa Indonesia</label>

@@ -132,7 +132,7 @@
 
                                     <p class="mt-2 text-xs text-slate-500">
                                         Token berlaku sampai:
-                                        {{ $connectedThreads->token_expires_at?->format('d M Y H:i') ?? 'Tidak diketahui' }}
+                                        {{ $connectedThreads->token_expires_at?->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') ?? 'Tidak diketahui' }}
                                     </p>
 
                                 </div>
