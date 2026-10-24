@@ -353,4 +353,28 @@ class ApifyWebDiscoveryTest extends TestCase
             ->assertOk()->assertJsonPath('tracked.status', 'completed')->assertJsonPath('tracked.fetched_count', 0);
         Http::assertNotSent(fn ($request) => $request->method() === 'POST');
     }
+
+    public function test_five_posts_with_new_free_plan_notice_can_be_reimported_after_failure(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $keyword = $this->keyword($admin);
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $entries = array_map(fn (int $id): array => $this->postEntry((string) $id, 'Need a website for my business'), range(1, 5));
+        $entries[] = ['platform' => 'threads', 'item_type' => 'hint', 'item_id' => null, 'url' => null,
+            'mode' => 'search_latest', 'source_input' => '',
+            'error_message' => 'Free Apify plan: 1 run per day with up to 5 results, without comment replies. Upgrade to any paid Apify plan for unlimited runs, results and all modes.'];
+        $this->fakeResults($entries);
+        $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, 'remote123');
+        DB::table('discovery_runs')->where('id', $run->id)->update(['status' => 'failed', 'error_code' => 'ACTOR_OUTPUT_ERROR']);
+
+        $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id, 'existing_run_id' => 'remote123'])
+            ->assertAccepted()->assertJsonPath('run_id', $run->id);
+        app(RunApifyDiscovery::class)->advance($run->id);
+
+        $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'completed', 'fetched_count' => 5, 'added_count' => 5, 'error_code' => null]);
+        $this->assertDatabaseCount('discovered_posts', 5);
+        $this->assertDatabaseCount('ai_analyses', 5);
+        $this->assertDatabaseCount('leads', 5);
+        Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+    }
 }

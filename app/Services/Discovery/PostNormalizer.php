@@ -17,7 +17,10 @@ class PostNormalizer
             && ($entry['source_input'] ?? null) === ''
             && ($entry['item_id'] ?? null) === null
             && ($entry['url'] ?? null) === null
-            && ($entry['error_message'] ?? null) === 'Free Apify plan: this actor returns up to 10 results per run, without comment replies. Upgrade to any paid Apify plan for unlimited results and all modes.';
+            && in_array($entry['error_message'] ?? null, [
+                'Free Apify plan: this actor returns up to 10 results per run, without comment replies. Upgrade to any paid Apify plan for unlimited results and all modes.',
+                'Free Apify plan: 1 run per day with up to 5 results, without comment replies. Upgrade to any paid Apify plan for unlimited runs, results and all modes.',
+            ], true);
     }
 
     /** @param array<string, mixed> $entry */

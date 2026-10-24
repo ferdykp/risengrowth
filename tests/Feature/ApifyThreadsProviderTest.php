@@ -296,12 +296,14 @@ class ApifyThreadsProviderTest extends TestCase
         Http::assertSentCount(5);
     }
 
-    public function test_ten_posts_plus_actual_free_plan_notice_are_accepted(): void
+    #[TestWith([10, 'Free Apify plan: this actor returns up to 10 results per run, without comment replies. Upgrade to any paid Apify plan for unlimited results and all modes.'])]
+    #[TestWith([5, 'Free Apify plan: 1 run per day with up to 5 results, without comment replies. Upgrade to any paid Apify plan for unlimited runs, results and all modes.'])]
+    public function test_posts_plus_known_free_plan_notices_are_accepted(int $count, string $message): void
     {
-        $posts = array_map(fn (int $id): array => $this->entry('customer', (string) $id), range(1, 10));
+        $posts = array_map(fn (int $id): array => $this->entry('customer', (string) $id), range(1, $count));
         $notice = ['platform' => 'threads', 'item_type' => 'hint', 'item_id' => null, 'url' => null,
             'mode' => 'search_latest', 'source_input' => '',
-            'error_message' => 'Free Apify plan: this actor returns up to 10 results per run, without comment replies. Upgrade to any paid Apify plan for unlimited results and all modes.'];
+            'error_message' => $message];
         Http::fake([
             'api.apify.com/v2/actor-runs/run123' => Http::response($this->runPayload()),
             'api.apify.com/v2/actors/openclawai~threads-scraper' => Http::response(['data' => ['id' => 'actor123']]),
@@ -310,9 +312,9 @@ class ApifyThreadsProviderTest extends TestCase
 
         $result = app(ApifyThreadsProvider::class)->posts('run123', []);
 
-        $this->assertSame(11, $result['received']);
+        $this->assertSame($count + 1, $result['received']);
         $this->assertSame(1, $result['plan_notices']);
-        $this->assertCount(10, $result['posts']);
+        $this->assertCount($count, $result['posts']);
         Http::assertSentCount(3);
     }
 
