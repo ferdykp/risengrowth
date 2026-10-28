@@ -308,4 +308,30 @@ class CommentSuggestionTest extends TestCase
         $this->assertDatabaseMissing('comment_suggestions', ['body' => $body]);
         Http::assertSentCount(1);
     }
+
+    #[TestWith(['di threads ada yang buka jasa buat website kah? untuk usaha, kalau ada boleh dong info harga nya kira kira di berapa yaa, cari yang affordable. Terima kasihh'])]
+    #[TestWith(['Haloo guys lagi cari jasa pembuatan website untuk produk skincare dan hijab, yang bisa boleh drop portfolio & harganya di komen/DM yah. Gambarnya mau design simple dan clean look.'])]
+    public function test_buyer_examples_start_with_our_introduction_without_invented_prices(string $post): void
+    {
+        $result = app(GenerateCommentSuggestion::class)->generate($post, 'friendly', true, 'template');
+        $this->assertStringStartsWith('Halo Kak, kenalin kami dari RisenDev.', $result['body']);
+        $this->assertStringContainsString('estimasi biaya', $result['body']);
+        $this->assertDoesNotMatchRegularExpression('/Rp\s*\d|sudah.{0,10}(DM|kirim)/iu', $result['body']);
+        Http::assertNothingSent();
+    }
+
+    public function test_ai_buyer_prompt_asks_for_introduction_before_the_specific_response(): void
+    {
+        config()->set('services.groq.key', 'test-key');
+        $body = 'Halo Kak, kenalin kami dari RisenDev. Untuk website skincare dan hijab dengan desain simple, kita bisa diskusikan kebutuhan fiturnya dulu.';
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $body]]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), [
+            'post_text' => 'Cari jasa website untuk skincare dan hijab, desain simple dan clean. Bisa info harga dan portfolio?', 'tone' => 'friendly',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('comment_suggestions', ['provider' => 'groq', 'body' => $body]);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'perkenalan singkat → tanggapan spesifik → ajakan diskusi ringan')
+            && str_contains($request['messages'][0]['content'], 'never invent a starting price')
+            && str_contains($request['messages'][0]['content'], 'Never claim to have sent a DM'));
+        Http::assertSentCount(1);
+    }
 }
