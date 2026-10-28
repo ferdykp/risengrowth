@@ -111,4 +111,27 @@ class CommentGeneratorTest extends TestCase
         $this->assertDatabaseHas('comment_drafts', ['lead_id' => $lead->id, 'status' => 'draft']);
         Http::assertNothingSent();
     }
+
+    public function test_scraped_post_can_prefill_quick_comment_and_dm_without_creating_a_lead(): void
+    {
+        $post = DiscoveredPost::create(['platform' => 'threads', 'external_post_id' => 'scraped-dm-test', 'username' => 'tokobaru',
+            'body' => 'Cari website toko dengan katalog produk dan WhatsApp.', 'permalink' => 'https://www.threads.com/@tokobaru/post/Abc123']);
+        $this->actingAs(User::factory()->create())->get(route('comments.index', ['post' => $post->id]))
+            ->assertOk()->assertSee($post->body)->assertSee($post->permalink)->assertSee('Draft DM pribadi');
+        $this->assertDatabaseCount('leads', 0);
+        $this->get(route('comments.index', ['post' => 999999]))->assertNotFound();
+    }
+
+    public function test_configured_ai_is_the_default_for_saved_posts_and_professional_uses_contextual_prompt(): void
+    {
+        config()->set('services.groq.key', 'test-key');
+        $this->actingAs(User::factory()->create());
+        $lead = $this->lead();
+        $this->get(route('comments.index', ['lead' => $lead->id]))->assertSee('<option value="groq" selected>', false);
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'Kebutuhan katalog dan alur WhatsApp-nya bisa kita diskusikan sesuai proses pemesanan toko.']]]])]);
+        $this->post(route('comments.generate'), ['lead_id' => $lead->id, 'variant_key' => 'professional', 'provider' => 'groq', 'language' => 'id'])->assertRedirect();
+        $this->assertDatabaseHas('comment_drafts', ['lead_id' => $lead->id, 'variant_key' => 'professional', 'status' => 'draft']);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'Preserve negation'));
+        Http::assertSentCount(1);
+    }
 }

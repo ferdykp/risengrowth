@@ -233,4 +233,79 @@ class CommentSuggestionTest extends TestCase
         $this->assertStringNotContainsString('@risendev', $result['body']);
         Http::assertNothingSent();
     }
+
+    public function test_dm_is_saved_privately_with_a_different_prompt_and_profile_link_without_sending(): void
+    {
+        config()->set('services.groq.key', 'test-key');
+        $body = 'Halo, aku dari tim RisenDev. Aku lihat kamu mencari katalog toko yang terhubung ke WhatsApp. Boleh ngobrol soal kebutuhan tokonya?';
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $body]]]])]);
+        $owner = User::factory()->create();
+        $this->actingAs($owner)->post(route('comments.suggestions.store'), $this->payload() + ['purpose' => 'dm'])
+            ->assertRedirect('/comments#quick-comments');
+        $this->assertDatabaseHas('comment_suggestions', ['user_id' => $owner->id, 'purpose' => 'dm', 'body' => $body]);
+        $this->get(route('comments.index'))->assertOk()->assertSee('Salin DM')->assertSee('href="https://www.threads.com/@pemiliktoko"', false);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'private introductory DM')
+            && str_contains($request['messages'][0]['content'], 'No URLs or account mentions'));
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('engagement_attempts', 0);
+        $this->actingAs(User::factory()->create())->get(route('comments.index'))->assertDontSee($body);
+    }
+
+    public function test_first_contact_dm_does_not_keep_links_even_when_branding_is_enabled(): void
+    {
+        config()->set('services.groq.key', 'test-key');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'Halo, tim kami bisa bantu katalog. Lihat https://risencode.dev ya.']]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload() + ['purpose' => 'dm'])->assertRedirect();
+        $record = DB::table('comment_suggestions')->first();
+        $this->assertSame('template', $record->provider);
+        $this->assertSame('dm', $record->purpose);
+        $this->assertStringNotContainsString('https://', $record->body);
+        Http::assertSentCount(1);
+    }
+
+    #[TestWith(['insightful', 'insight praktis'])]
+    #[TestWith(['direct', 'tanpa basa-basi'])]
+    #[TestWith(['playful', 'sedikit jenaka'])]
+    public function test_new_styles_include_context_guardrails(string $tone, string $instruction): void
+    {
+        config()->set('services.groq.key', 'test-key');
+        $body = 'Untuk katalog toko, alur ke WhatsApp bisa dibuat sesuai cara pelangganmu memesan.';
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $body]]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), array_replace($this->payload(), ['tone' => $tone]))->assertRedirect();
+        $this->assertDatabaseHas('comment_suggestions', ['tone' => $tone, 'body' => $body, 'purpose' => 'comment']);
+        Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], $instruction)
+            && str_contains($request['messages'][0]['content'], 'Preserve negation')
+            && str_contains($request['messages'][0]['content'], 'Never repeat a supplied budget or deadline'));
+    }
+
+    public function test_unsupported_destination_and_style_are_rejected(): void
+    {
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), array_replace($this->payload(), ['purpose' => 'send-now', 'tone' => 'spam']))
+            ->assertSessionHasErrors(['purpose', 'tone']);
+        $this->assertDatabaseCount('comment_suggestions', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_negated_request_is_not_used_as_a_sales_opportunity(): void
+    {
+        $result = app(GenerateCommentSuggestion::class)->generate('Aku tidak butuh website baru, cuma ingin cerita soal pengalaman kerja.', 'casual', true, 'template');
+        $this->assertStringNotContainsString('@risendev', $result['body']);
+        $this->assertStringNotContainsString('partner', $result['body']);
+        Http::assertNothingSent();
+    }
+
+    #[TestWith(['Bisa dimulai dari katalog WhatsApp supaya lebih gampang pesan.'])]
+    #[TestWith(['Untuk landing page yang kamu cari, kami bisa diskusi dulu.'])]
+    #[TestWith(['Budget untuk websitenya kira-kira berapa?'])]
+    public function test_off_context_features_and_repeated_budget_questions_are_not_saved_as_ai(string $body): void
+    {
+        config()->set('services.groq.key', 'test-key');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $body]]]])]);
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), [
+            'post_text' => 'Cari website untuk profil perusahaan, budget 5 juta. Tidak perlu fitur jualan.', 'tone' => 'direct',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('comment_suggestions', ['provider' => 'template']);
+        $this->assertDatabaseMissing('comment_suggestions', ['body' => $body]);
+        Http::assertSentCount(1);
+    }
 }

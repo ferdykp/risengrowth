@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommentDraft;
+use App\Models\DiscoveredPost;
 use App\Models\Lead;
 use App\Services\Discovery\GenerateCommentSuggestion;
 use App\Services\Discovery\LocalAiAssistant;
@@ -26,6 +27,7 @@ class CommentGeneratorController extends Controller
 
         return view('comments.index', [
             'selectedLead' => $selectedLead,
+            'sourcePost' => $request->filled('post') ? DiscoveredPost::query()->findOrFail($request->integer('post')) : $selectedLead?->post,
             'suggestions' => DB::table('comment_suggestions')->where('user_id', $request->user()->id)->orderByDesc('id')->paginate(5, ['*'], 'suggestions_page')->withQueryString(),
             'leads' => Lead::query()->with('post')->latest()->limit(50)->get(),
             'drafts' => $selectedLead
@@ -64,7 +66,7 @@ class CommentGeneratorController extends Controller
         $provider = $data['provider'] ?? 'groq';
         $language = $data['language'] ?? 'id';
         if (in_array($provider, ['ollama', 'template'], true)) {
-            if ($language === 'id' && in_array($data['variant_key'], ['casual', 'friendly'], true)) {
+            if ($language === 'id') {
                 $result = app(GenerateCommentSuggestion::class)->generate($lead->post->body, $data['variant_key'], true, $provider);
                 $this->saveRevision($lead->id, $data['variant_key'], $result['body'], $request->user()->id);
 
@@ -97,7 +99,7 @@ class CommentGeneratorController extends Controller
             return back()->withErrors(['ai' => 'Batas generate tercapai. Coba beberapa saat lagi.']);
         }
         RateLimiter::hit($key, 3600);
-        if ($language === 'id' && in_array($data['variant_key'], ['casual', 'friendly'], true)) {
+        if ($language === 'id') {
             $result = app(GenerateCommentSuggestion::class)->generate($lead->post->body, $data['variant_key'], true, 'groq');
             $this->saveRevision($lead->id, $data['variant_key'], $result['body'], $request->user()->id);
 

@@ -29,13 +29,20 @@ class CommentSuggestionController extends Controller
                 }
             }],
             'allow_brand' => ['nullable', 'boolean'],
-            'tone' => ['required', Rule::in(['casual', 'friendly'])],
+            'purpose' => ['nullable', Rule::in(['comment', 'dm'])],
+            'tone' => ['required', Rule::in(['casual', 'friendly', 'insightful', 'direct', 'playful'])],
         ]);
-        $result = $generator->generate($data['post_text'], $data['tone'], (bool) ($data['allow_brand'] ?? true));
+        $result = $generator->generate($data['post_text'], $data['tone'], (bool) ($data['allow_brand'] ?? true), purpose: $data['purpose'] ?? 'comment');
         DB::table('comment_suggestions')->insert([
             'user_id' => $request->user()->id, 'post_text' => $data['post_text'], 'post_url' => $data['post_url'] ?? null,
-            'tone' => $data['tone'], 'provider' => $result['provider'], 'body' => $result['body'], 'created_at' => now(), 'updated_at' => now(),
+            'purpose' => $data['purpose'] ?? 'comment', 'tone' => $data['tone'], 'provider' => $result['provider'], 'body' => $result['body'], 'created_at' => now(), 'updated_at' => now(),
         ]);
+
+        if (($data['purpose'] ?? 'comment') === 'dm') {
+            return redirect()->to(route('comments.index', [], false).'#quick-comments')->withInput($data)->with('success', $result['provider'] === 'template'
+                ? 'Draft DM template siap. AI belum tersedia; edit dulu lalu salin dan kirim sendiri melalui Threads.'
+                : 'Draft DM siap. Review, salin, lalu buka profil penulis dan kirim sendiri melalui Threads.');
+        }
 
         return redirect()->to(route('comments.index', [], false).'#quick-comments')->withInput($data)->with('success', $result['provider'] === 'template'
             ? 'Saran template siap. AI belum tersedia; edit sesuai postingan lalu salin ke Threads.'

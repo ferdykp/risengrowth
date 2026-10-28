@@ -5,6 +5,7 @@
                     <p class="text-xs text-slate-600">{{ $analysis->output['rationale'] ?? '' }}</p>
                     @if(!empty($analysis->output['evidence']))<p class="rg-review-evidence text-xs text-slate-500 break-words">Bukti: {{ json_encode($analysis->output['evidence'], JSON_UNESCAPED_UNICODE) }}</p>@endif
                     @if($analysis->post->permalink && parse_url($analysis->post->permalink, PHP_URL_SCHEME) === 'https')<a href="{{ $analysis->post->permalink }}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">Postingan asli ↗</a>@endif
+                    <a href="{{ route('comments.index', ['post' => $analysis->post->id], false) }}#quick-comments" class="text-sm font-semibold text-blue-700 underline">Buat komentar / draft DM</a>
                     @if(!empty($analysis->output['local_ai']))<p class="text-xs text-slate-600">Saran AI (perlu review): {{ $analysis->output['local_ai']['reason'] }} {{ $analysis->output['local_ai']['follow_up'] }}</p>@endif
                     @if(config('services.ollama.enabled'))<form method="POST" action="{{ route('discovery.posts.local', $analysis->post, false) }}">@csrf<button class="text-sm text-blue-700 underline">Minta saran AI lokal</button></form>@endif
                     <form method="POST" action="{{ route('discovery.posts.review', $analysis->post, false) }}" class="rg-review-form">
