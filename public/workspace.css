@@ -205,3 +205,17 @@ html:has(dialog[open]) { overflow: hidden; }
     .rg-dialog-footer { padding: 16px 20px; }
     .rg-dialog-footer button { flex: 1; padding-inline: 10px; }
 }
+
+.rg-keyword-suggestions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.rg-keyword-suggestion-group { min-width: 0; }
+.rg-keyword-suggestion-group h3 { font-size: 13px; font-weight: 650; color: #334155; }
+.rg-keyword-suggestion-group > p { margin-top: 6px; font-size: 12px; line-height: 1.6; color: #64748b; }
+.rg-keyword-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rg-keyword-chips button { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; max-width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafbfc; color: #475569; font-size: 12px; line-height: 1.5; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.rg-keyword-chips button span { color: #94a3b8; }
+.rg-keyword-chips button:hover { border-color: #ff4f00; background: #fff6f0; color: #a63100; }
+.rg-keyword-chips button:focus-visible { outline: 2px solid #ff4f00; outline-offset: 2px; }
+.rg-keyword-suggestions-compact { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.rg-keyword-suggestion-picker { border-top: 1px solid #eef0f3; padding-top: 16px; }
+.rg-keyword-suggestion-picker > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #475569; }
+@media (max-width: 767px) { .rg-keyword-suggestions { grid-template-columns: minmax(0, 1fr); gap: 20px; } }

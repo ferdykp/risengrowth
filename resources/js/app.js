@@ -19,3 +19,18 @@ document.addEventListener('click', (event) => {
     const close = event.target.closest('[data-dialog-close]');
     if (close) close.closest('dialog')?.close();
 });
+
+// Suggestions prefill the existing form; saving remains an explicit user action.
+document.addEventListener('click', (event) => {
+    const suggestion = event.target.closest('[data-keyword-suggestion]');
+    if (!suggestion) return;
+    const dialog = document.getElementById('create-keyword');
+    const form = dialog?.querySelector('form');
+    if (!form) return;
+    form.elements.phrase.value = suggestion.dataset.keywordSuggestion;
+    form.elements.category.value = suggestion.dataset.keywordCategory;
+    if (!dialog.open) dialog.showModal();
+    form.elements.phrase.focus();
+    form.elements.phrase.scrollIntoView({block: 'nearest'});
+    form.elements.phrase.dispatchEvent(new Event('input', {bubbles: true}));
+});

@@ -7,6 +7,11 @@
 
 
 <div class="grid sm:grid-cols-2 gap-4"><div class="rg-panel bg-white rounded-2xl border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">Total keyword</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ $totalCount }}</p></div><div class="rg-panel bg-white rounded-2xl border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">Keyword aktif</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ $activeCount }}</p></div></div>
+<section class="rg-panel bg-white border border-slate-200 rounded-2xl" aria-labelledby="keyword-suggestions-heading">
+    <div class="mb-5"><p class="text-xs font-semibold text-orange-700 mb-2">BAHASA INDONESIA DIUTAMAKAN</p><h2 id="keyword-suggestions-heading" class="text-lg font-bold">Saran keyword untuk Threads</h2><p class="text-sm text-slate-500 mt-2">Klik untuk mengisi formulir. Saran kurasi sebagai titik awal pencarian, bukan tren atau hasil pencarian Threads yang sudah diverifikasi.</p></div>
+    @include('keywords.partials.suggestions')
+    <p class="text-xs text-slate-500 mt-5">Mulai dari 3–5 keyword yang sesuai tujuanmu. Coba variasi “cari”, “nyari”, dan “butuh”. Hasil tetap perlu ditinjau: promosi jasa atau lowongan belum tentu calon klien.</p>
+</section>
 <section class="rg-panel bg-white border border-slate-200 rounded-2xl p-5 md:p-6">
 <div class="space-y-4 mb-5"><h2 class="text-lg font-bold">Daftar keyword</h2><form method="GET" action="{{ route('keywords.index') }}" class="rg-keyword-filters"><input aria-label="Cari keyword" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari keyword..." class="rounded-lg border border-slate-200 px-3 py-2 text-sm min-w-0" /><select name="category" aria-label="Kategori" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Semua kategori</option>@foreach(['direct_demand'=>'Kebutuhan langsung','business_pain'=>'Masalah bisnis','developer_community'=>'Komunitas developer'] as $code=>$name)<option value="{{ $code }}" @selected(($filters['category'] ?? '')===$code)>{{ $name }}</option>@endforeach</select><select name="status" aria-label="Status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Semua status</option><option value="active" @selected(($filters['status'] ?? '')==='active')>Aktif</option><option value="inactive" @selected(($filters['status'] ?? '')==='inactive')>Nonaktif</option><option value="deleted" @selected(($filters['status'] ?? '')==='deleted')>Arsip</option></select><button class="px-4 py-2 rounded-lg bg-slate-950 text-white text-sm font-semibold">Filter</button><a href="{{ route('keywords.index') }}" class="px-3 py-2 text-sm text-slate-500">Reset</a></form></div>
 <div class="space-y-2">
@@ -24,7 +29,10 @@
 <x-modal id="create-keyword" title="Tambah keyword" description="Tentukan topik dan pengaturan pencarian. Keyword akan digunakan saat discovery dijalankan.">
     <form method="POST" action="{{ route('keywords.store') }}" class="rg-dialog-form">
         @csrf
-        <div class="rg-dialog-body">@include('keywords.partials.fields', ['prefix' => 'create'])</div>
+        <div class="rg-dialog-body">
+            @include('keywords.partials.fields', ['prefix' => 'create'])
+            <details class="rg-keyword-suggestion-picker"><summary>Butuh inspirasi? Pilih saran keyword</summary><p class="text-xs text-slate-500 mt-2">Pilihan ini mengisi kata kunci dan kategori. Edit sesuai kebutuhan sebelum menyimpan.</p><div class="mt-4">@include('keywords.partials.suggestions', ['compact' => true])</div></details>
+        </div>
         <footer class="rg-dialog-footer">
             <button type="button" data-dialog-close class="rg-button-secondary">Batal</button>
             <button type="submit" class="rg-button-primary">Simpan keyword</button>
