@@ -4,6 +4,15 @@
 @section('page_heading', 'Eksplorasi')
 
 @section('content')
+<div class="flex flex-wrap gap-3"><a class="rg-action bg-white" href="{{ route('keywords.index') }}">Kelola keyword</a><a class="rg-action bg-white" href="{{ route('leads.index') }}">Results inbox</a></div>
+<details class="rg-panel bg-white border rounded-2xl"><summary class="cursor-pointer font-semibold">Capture postingan manual</summary><p class="text-sm text-slate-500 mt-3">Tempel teks dan URL sebagai referensi. Tidak mengambil halaman atau memerlukan koneksi Threads.</p><form method="POST" action="{{ route('discovery.capture') }}" class="grid gap-4 mt-4 sm:grid-cols-2">@csrf
+<label class="text-sm">Platform<select name="platform" class="block w-full border rounded-lg p-2"><option value="threads">Threads</option><option value="web">Web</option><option value="instagram">Instagram</option></select></label>
+<label class="text-sm">Penulis<input name="username" maxlength="191" class="block w-full border rounded-lg p-2" value="{{ old('username') }}"></label>
+<label class="text-sm sm:col-span-2">URL asli<input name="url" type="url" required maxlength="2048" class="block w-full border rounded-lg p-2" value="{{ old('url') }}"></label>
+<label class="text-sm sm:col-span-2">Teks postingan<textarea name="body" required minlength="10" maxlength="20000" class="block w-full border rounded-lg p-2">{{ old('body') }}</textarea></label>
+<label class="text-sm">Keyword konteks<input name="keyword" required maxlength="191" class="block w-full border rounded-lg p-2" value="{{ old('keyword') }}"></label><div class="flex items-end"><button class="bg-slate-950 text-white rounded-xl px-4 py-2">Simpan untuk review</button></div>
+</form></details>
+
 
     @php
         /*
@@ -141,6 +150,11 @@
 
             </div>
 
+            <div class="rounded-xl border bg-white p-4 text-sm space-y-2">
+                <p><strong>OAuth:</strong> {{ $connectedAccount ? 'Terhubung' : 'Tidak tersedia' }} · Koneksi akun belum membuktikan izin public search.</p>
+                <p><strong>Threads search:</strong> @if(!$lastThreadsRun)Belum diverifikasi melalui run resmi.@elseif($lastThreadsRun->status === 'failed')Run terakhir gagal · {{ $lastThreadsRun->error_code }}.@elseRun terakhir berhasil · {{ $lastThreadsRun->fetched_count }} hasil. Izin dapat berubah.@endif</p>
+                <p class="text-xs text-slate-500">Capture manual tetap tersedia. Python mencari sumber web/API yang diizinkan, bukan Threads.</p>
+            </div>
             {{-- DISCOVERY FORM --}}
 
             @if ($isAdmin)
@@ -747,6 +761,7 @@
             <p class="text-xs text-slate-500">Threads via Apify memakai token server. Opsi Threads API resmi memerlukan akun dan izin Meta. Hasil public web berasal dari sumber yang dikonfigurasi admin.</p>
             <form method="GET" action="{{ route('discovery.index') }}" class="flex flex-wrap gap-3">
                 <label class="flex items-center gap-2 text-sm text-slate-600"><input type="hidden" name="prefer_indonesian" value="0"><input type="checkbox" name="prefer_indonesian" value="1" @checked((bool) ($filters['prefer_indonesian'] ?? true))> Utamakan bahasa Indonesia</label>
+<label class="text-sm">Kategori<select name="category" class="rounded-lg border p-2"><option value="">Semua kategori</option>@foreach(['business' => 'Business lead', 'community' => 'Community opportunity', 'not_relevant' => 'Not relevant'] as $value => $label)<option value="{{ $value }}" @selected(($filters['category'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
                 <label class="text-sm">Kualifikasi
                     <select name="qualification" class="rounded-lg border border-slate-200 p-2">
                         <option value="">Semua postingan</option>

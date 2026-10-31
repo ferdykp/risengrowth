@@ -31,14 +31,14 @@ def matches_keyword(body, keyword):
 
 
 def source_is_valid(src):
-    parsed = urlparse(src.get("url", ""))
-    if (parsed.scheme != "https" or not parsed.hostname or parsed.username
-            or parsed.password or parsed.port not in (None, 443)):
-        return False
     try:
+        parsed = urlparse(src.get("url", ""))
+        if (parsed.scheme != "https" or not parsed.hostname or parsed.username
+                or parsed.password or parsed.port not in (None, 443)):
+            return False
         addresses = socket.getaddrinfo(parsed.hostname, 443, type=socket.SOCK_STREAM)
         return bool(addresses) and all(ipaddress.ip_address(a[4][0]).is_global for a in addresses)
-    except (OSError, ValueError):
+    except (OSError, ValueError, TypeError):
         return False
 
 
@@ -82,6 +82,23 @@ def source_timeout(source, maximum=10):
     return min(maximum, remaining)
 
 
+
+def fetch_bounded(client, url, timeout):
+    """Enforce the limit while receiving bytes, before parsing provider content."""
+    with client.stream("GET", url, timeout=timeout) as response:
+        if response.is_redirect:
+            raise ValueError("Redirect refused; configure final URL explicitly")
+        response.raise_for_status()
+        chunks, received = [], 0
+        for chunk in response.iter_bytes():
+            received += len(chunk)
+            if received > 2_000_000:
+                raise ValueError("Source response too large")
+            chunks.append(chunk)
+        return httpx.Response(response.status_code, headers=response.headers,
+                              content=b"".join(chunks), request=response.request)
+
+
 def scrape_http(source, keyword):
     found = []
     url = source["url"]
@@ -94,7 +111,7 @@ def scrape_http(source, keyword):
             if not permitted_url(url, source):
                 raise ValueError("Page URL outside permitted public source")
             visited.add(url)
-            response = client.get(url, timeout=source_timeout(source))
+            response = fetch_bounded(client, url, source_timeout(source))
             response.raise_for_status()
             if response.is_redirect:
                 raise RuntimeError("Redirect refused; configure final URL explicitly")
@@ -139,7 +156,7 @@ def extract_rss(xml, source, keyword):
 
 def scrape_rss(source, keyword):
     with httpx.Client(timeout=10, follow_redirects=False, headers={"User-Agent": "RisenGrowthResearch/1.0"}) as client:
-        response = client.get(source["url"], timeout=source_timeout(source))
+        response = fetch_bounded(client, source["url"], source_timeout(source))
         response.raise_for_status()
         if response.is_redirect or len(response.content) > 2_000_000:
             raise ValueError("Feed redirect or oversized response refused")
@@ -226,6 +243,10 @@ SOURCE_ADAPTERS = {"http": scrape_http, "browser": scrape_browser, "rss": scrape
 
 def run(keyword, config_path):
     configuration = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    if not isinstance(configuration, dict) or not isinstance(configuration.get("sources"), list):
+        raise ValueError("Configuration must contain a sources list")
+    if any(not isinstance(source, dict) for source in configuration["sources"]):
+        raise ValueError("Source entries must be objects")
     all_posts, errors = [], []
     sources = [s for s in configuration.get("sources", []) if s.get("enabled", False)]
     for configured_source in sources:

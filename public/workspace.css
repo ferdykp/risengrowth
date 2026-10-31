@@ -136,3 +136,12 @@
 @media (prefers-reduced-motion: reduce) {
     .rg-nav, #rg-sidebar { transition: none; }
 }
+
+/* RisenDev workspace identity */
+body { background: #F2EFE8; color: #111111; }
+.rg-nav[aria-current=page] { background: #fff0e8; color: #a63100; }
+.rg-nav[aria-current=page] .material-symbols-outlined { color: #FF4F00; }
+.rg-nav:hover { background: #f7f5f0; }
+.rg-action { display:inline-flex; align-items:center; min-height:44px; padding:10px 16px; border:1px solid #ded9cf; border-radius:12px; font-size:14px; }
+.rg-action:hover { border-color:#FF4F00; }
+:where(.rg-page, .rg-auth) :where(a,button,input,select,textarea,summary):focus-visible { outline-color:#FF4F00; }

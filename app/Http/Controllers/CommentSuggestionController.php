@@ -30,7 +30,7 @@ class CommentSuggestionController extends Controller
             }],
             'allow_brand' => ['nullable', 'boolean'],
             'purpose' => ['nullable', Rule::in(['comment', 'dm'])],
-            'tone' => ['required', Rule::in(['casual', 'friendly', 'insightful', 'direct', 'playful'])],
+            'tone' => ['required', Rule::in(['casual', 'friendly', 'insightful', 'direct', 'playful', 'professional'])],
         ]);
         $result = $generator->generate($data['post_text'], $data['tone'], (bool) ($data['allow_brand'] ?? true), purpose: $data['purpose'] ?? 'comment');
         DB::table('comment_suggestions')->insert([
@@ -49,13 +49,24 @@ class CommentSuggestionController extends Controller
             : 'Saran komentar siap. Baca dan edit dulu, lalu salin ke Threads.');
     }
 
+    public function replied(Request $request, int $suggestion): RedirectResponse
+    {
+        $request->validate(['confirm_replied' => ['accepted']]);
+        $record = DB::table('comment_suggestions')->where('id', $suggestion)->where('user_id', $request->user()->id)->first();
+        abort_unless($record, 404);
+        DB::table('comment_suggestions')->where('id', $record->id)->where('user_id', $request->user()->id)
+            ->whereNull('replied_at')->update(['replied_at' => now(), 'updated_at' => now()]);
+
+        return back()->with('success', 'Balasan ditandai berdasarkan konfirmasi manual kamu.');
+    }
+
     public function update(Request $request, int $suggestion): RedirectResponse
     {
         $data = $request->validate(['body' => ['required', 'string', 'min:10', 'max:2000']]);
         $record = DB::table('comment_suggestions')->where('id', $suggestion)->where('user_id', $request->user()->id)->first();
         abort_unless($record, 404);
         DB::table('comment_suggestions')->where('id', $record->id)->where('user_id', $request->user()->id)
-            ->update(['body' => trim($data['body']), 'updated_at' => now()]);
+            ->update(['body' => trim($data['body']), 'replied_at' => null, 'updated_at' => now()]);
 
         return redirect()->to(route('comments.index', [], false).'#quick-comments')->with('success', 'Perubahan komentar tersimpan.');
     }

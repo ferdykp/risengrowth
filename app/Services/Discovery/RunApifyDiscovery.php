@@ -19,7 +19,7 @@ class RunApifyDiscovery
 {
     public function __construct(
         private readonly ApifyThreadsProvider $provider,
-        private readonly QualifyDiscoveredPost $qualifier,
+        private readonly RecordOpportunityAssessment $assessment,
         private readonly ApifyDiscoverySettings $settings,
     ) {}
 
@@ -208,15 +208,8 @@ class RunApifyDiscovery
                 $post->update(['last_seen_at' => now()]);
                 DB::table('discovery_run_posts')->insertOrIgnore(['discovery_run_id' => $run->id, 'discovered_post_id' => $post->id,
                     'created_at' => now(), 'updated_at' => now()]);
-                $classification = $this->qualifier->classify($post->body ?? '', $run->keyword_snapshot);
-                $output = $classification + ['source' => 'apify', 'keyword_id' => $run->search_keyword_id, 'run_id' => $run->id];
-                $previous = $post->analyses()->first()?->output;
-                if (isset($previous['reviewer_id'])) {
-                    $output = array_merge($output, ['status' => $previous['status'], 'rationale' => $previous['rationale'],
-                        'reviewer_id' => $previous['reviewer_id'], 'rule_assessment' => $classification]);
-                }
-                AiAnalysis::create(['discovered_post_id' => $post->id, 'provider' => 'rules', 'model' => QualifyDiscoveredPost::VERSION,
-                    'prompt_version' => QualifyDiscoveredPost::VERSION, 'status' => 'completed', 'score' => $classification['score'], 'output' => $output, 'analyzed_at' => now()]);
+                $classification = $this->assessment->record($post, $run->keyword_snapshot, 'apify', $run->search_keyword_id, $run->id);
+                $output = $classification;
                 if ($output['status'] === 'uncertain') {
                     $uncertain++;
                 } elseif ($output['status'] === 'rejected') {

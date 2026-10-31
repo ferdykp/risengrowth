@@ -2,7 +2,6 @@
 
 namespace App\Services\Discovery;
 
-use App\Models\AiAnalysis;
 use App\Models\DiscoveredPost;
 use App\Models\Lead;
 use Illuminate\Support\Facades\Cache;
@@ -15,7 +14,7 @@ use Throwable;
 
 class RunPythonDiscovery
 {
-    public function __construct(private readonly QualifyDiscoveredPost $qualifier) {}
+    public function __construct(private readonly RecordOpportunityAssessment $assessment) {}
 
     /** @return array{fetched: int, added: int, linked: int} */
     public function execute(object $keyword): array
@@ -93,22 +92,8 @@ class RunPythonDiscovery
                         'created_at' => now(), 'updated_at' => now(),
                     ]);
                     $linked[$post->id] = true;
-                    $qualification = $this->qualifier->classify($post->body, $keyword->phrase);
-                    $output = $qualification + ['source' => $entry['source'], 'keyword_id' => $keyword->id, 'run_id' => $runId];
-                    $previous = $post->analyses()->first()?->output;
-                    if (isset($previous['reviewer_id'])) {
-                        $output['rule_assessment'] = $qualification;
-                        $output['status'] = $previous['status'];
-                        $output['rationale'] = $previous['rationale'];
-                        $output['reviewer_id'] = $previous['reviewer_id'];
-                    }
-                    AiAnalysis::create([
-                        'discovered_post_id' => $post->id, 'provider' => 'rules',
-                        'model' => QualifyDiscoveredPost::VERSION, 'prompt_version' => QualifyDiscoveredPost::VERSION,
-                        'status' => 'completed', 'score' => $qualification['score'],
-                        'output' => $output,
-                        'analyzed_at' => now(),
-                    ]);
+                    $qualification = $this->assessment->record($post, $keyword->phrase, $entry['source'], $keyword->id, $runId);
+                    $output = $qualification;
                     if ($output['status'] !== 'qualified') {
                         continue;
                     }

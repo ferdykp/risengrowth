@@ -8,8 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { theme: { extend: { colors: { surface:'#fbf8ff', 'surface-container-lowest':'#fff', 'surface-container-low':'#f4f2fd', 'surface-container':'#eeedf7', 'surface-container-high':'#e8e7f1', 'on-surface':'#1a1b22', 'on-surface-variant':'#64748b', 'on-background':'#1a1b22', secondary:'#0051d5', 'secondary-fixed':'#dbe1ff', 'on-secondary-fixed-variant':'#003ea8', primary:'#000', 'on-primary':'#fff' }, fontFamily:{sans:['Inter','ui-sans-serif','system-ui']} } } };</script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
       :root{color-scheme:light}body{font-family:Inter,ui-sans-serif,system-ui;background:#fbf8ff;color:#1a1b22}
       .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 450,'GRAD' 0,'opsz' 22;line-height:1}
@@ -24,19 +23,17 @@
     @stack('styles')
 </head>
 <body class="antialiased min-h-screen">
+<a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] bg-white p-3">Lewati ke konten</a>
 @php
     $navItems = [
-      ['overview', 'Ikhtisar', 'dashboard'],
-      ['leads.index', 'Kotak Masuk Prospek', 'inbox'],
-      ['discovery.index', 'Eksplorasi', 'travel_explore'],
-      ['keywords.index', 'Kata Kunci', 'tag'],
-      ['comments.index', 'Generator Komentar', 'auto_awesome'],
-      ['reviews.index', 'Antrean Review', 'fact_check'],
-      ['activity.index', 'Aktivitas', 'show_chart'],
+      ['overview', 'Today', 'today'],
+      ['discovery.index', 'Discover', 'travel_explore'],
+      ['relationships.index', 'Relationships', 'group'],
+      ['studio.index', 'Content Studio', 'edit_note'],
     ];
 @endphp
 <div class="lg:hidden sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur rg-shadow px-4 py-3 flex items-center justify-between">
-  <div class="min-w-0"><a href="{{ route('overview') }}" class="font-extrabold tracking-tight">RisenGrowth <span class="text-[10px] font-semibold bg-slate-100 rounded px-1.5 py-1">Pro AI</span></a>
+  <div class="min-w-0"><a href="{{ route('overview') }}" class="font-extrabold tracking-tight">RisenGrowth <span class="text-[10px] font-semibold bg-slate-100 rounded px-1.5 py-1">V2</span></a>
     @include('components.wib-clock', ['compact' => true])
   </div>
   <button type="button" id="rg-menu-toggle" aria-controls="rg-sidebar" aria-expanded="false" aria-label="Buka navigasi" class="inline-flex items-center justify-center rounded-xl border border-slate-200 w-10 h-10"><span class="material-symbols-outlined">menu</span></button>
@@ -45,7 +42,7 @@
 <aside id="rg-sidebar" class="fixed z-50 inset-y-0 left-0 w-[264px] max-w-[88vw] bg-white border-r border-slate-100 rg-shadow flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-200" aria-label="Navigasi utama">
   <div class="px-5 h-[72px] flex items-center gap-2.5 border-b border-slate-50">
     <a href="{{ route('overview') }}" class="flex gap-2.5 items-center" aria-label="RisenGrowth Beranda"><span class="w-9 h-9 bg-[#111525] rounded-xl flex items-center justify-center text-white"><span class="material-symbols-outlined">monitoring</span></span><span class="font-bold tracking-tight text-[16px]">RisenGrowth</span></a>
-    <span class="text-[10px] font-semibold rounded bg-[#f1effa] px-1.5 py-1 text-slate-500">Pro AI</span>
+    <span class="text-[10px] font-semibold rounded bg-[#f1effa] px-1.5 py-1 text-slate-500">V2</span>
   </div>
   <div class="px-4 py-4 flex-1 overflow-y-auto">
     <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 mb-2">Workspace</div>
@@ -59,6 +56,11 @@
           </a>
        @endforeach
     </nav>
+    <details class="mt-5"><summary class="rg-nav cursor-pointer">Alat workspace</summary>
+    @foreach(['leads.index' => 'Kotak Masuk Prospek', 'keywords.index' => 'Kata Kunci', 'comments.index' => 'Reply Assistant', 'reviews.index' => 'Antrean Review', 'activity.index' => 'Aktivitas'] as $toolRoute => $toolLabel)
+    <a class="rg-nav" href="{{ route($toolRoute) }}">{{ $toolLabel }}</a>
+    @endforeach
+    </details>
     @if(auth()->user()?->role === 'admin')
        <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 mt-7 mb-2">Administrasi</div>
        <a href="{{ route('admin.users.index') }}" class="rg-nav" @if(request()->routeIs('admin.users.*')) aria-current="page" @endif><span class="material-symbols-outlined">group</span><span>User Management</span></a>
@@ -89,7 +91,33 @@
   </main>
 </div>
 <script>
-(function(){const b=document.getElementById('rg-menu-toggle'),n=document.getElementById('rg-sidebar'),o=document.getElementById('rg-overlay');function set(open){n.classList.toggle('-translate-x-full',!open);o.classList.toggle('hidden',!open);b.setAttribute('aria-expanded',String(open));}b.addEventListener('click',()=>set(b.getAttribute('aria-expanded')!=='true'));o.addEventListener('click',()=>set(false));document.addEventListener('keydown',e=>{if(e.key==='Escape')set(false)});})();
+(() => {
+    const button = document.getElementById('rg-menu-toggle');
+    const sidebar = document.getElementById('rg-sidebar');
+    const overlay = document.getElementById('rg-overlay');
+    const mobile = window.matchMedia('(max-width: 1023px)');
+    function setOpen(open) {
+        sidebar.classList.toggle('-translate-x-full', !open);
+        overlay.classList.toggle('hidden', !open);
+        sidebar.inert = mobile.matches && !open;
+        button.setAttribute('aria-expanded', String(open));
+        if (open && mobile.matches) sidebar.querySelector('a')?.focus();
+    }
+    button.addEventListener('click', () => setOpen(button.getAttribute('aria-expanded') !== 'true'));
+    overlay.addEventListener('click', () => { setOpen(false); button.focus(); });
+    mobile.addEventListener('change', () => setOpen(false));
+    document.addEventListener('keydown', event => {
+        if (!mobile.matches || button.getAttribute('aria-expanded') !== 'true') return;
+        if (event.key === 'Escape') { setOpen(false); button.focus(); }
+        if (event.key === 'Tab') {
+            const controls = [...sidebar.querySelectorAll('a,button,summary')].filter(element => element.getClientRects().length);
+            const first = controls[0], last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+    });
+    setOpen(false);
+})();
 </script>
 <script src="{{ request()->getBaseUrl().'/wib-clock.js?v='.filemtime(public_path('wib-clock.js')) }}" defer></script>
 @stack('scripts')

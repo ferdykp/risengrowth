@@ -31,8 +31,8 @@ class CommentGeneratorController extends Controller
             'suggestions' => DB::table('comment_suggestions')->where('user_id', $request->user()->id)->orderByDesc('id')->paginate(5, ['*'], 'suggestions_page')->withQueryString(),
             'leads' => Lead::query()->with('post')->latest()->limit(50)->get(),
             'drafts' => $selectedLead
-                ? $selectedLead->commentDrafts()->with('lead.post')->limit(15)->get()
-                : CommentDraft::query()->with('lead.post')->latest()->limit(15)->get(),
+                ? $selectedLead->commentDrafts()->where('author_id', $request->user()->id)->with('lead.post')->limit(15)->get()
+                : CommentDraft::query()->where('author_id', $request->user()->id)->with('lead.post')->latest()->limit(15)->get(),
             'aiConfigured' => filled(config('services.groq.key')) || app(LocalAiAssistant::class)->enabled(),
             'newLeadsCount' => Lead::query()->where('status', 'new')->count(),
         ]);

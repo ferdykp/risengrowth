@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ApifySettingsController;
 use App\Http\Controllers\CommentGeneratorController;
 use App\Http\Controllers\CommentSuggestionController;
+use App\Http\Controllers\ContentStudioController;
 use App\Http\Controllers\DiscoveredPostReviewController;
 use App\Http\Controllers\DiscoveryController;
 use App\Http\Controllers\DiscoveryRunController;
@@ -16,7 +17,9 @@ use App\Http\Controllers\LeadDetailController;
 use App\Http\Controllers\LeadInboxController;
 use App\Http\Controllers\LeadStatusController;
 use App\Http\Controllers\LocalQualificationController;
+use App\Http\Controllers\ManualCaptureController;
 use App\Http\Controllers\OverviewController;
+use App\Http\Controllers\RelationshipController;
 use App\Http\Controllers\ReviewQueueController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +51,12 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
     });
     Route::put('/account/password', [InternalAuthController::class, 'updatePassword'])->middleware('throttle:password-change')->name('account.password.update');
 
+    Route::get('/relationships', [RelationshipController::class, 'index'])->name('relationships.index');
+    Route::put('/leads/{lead}/relationship', [RelationshipController::class, 'update'])->middleware('throttle:account-mutations')->name('relationships.update');
+    Route::get('/studio', [ContentStudioController::class, 'index'])->name('studio.index');
+    Route::post('/studio', [ContentStudioController::class, 'store'])->middleware('throttle:account-mutations')->name('studio.store');
+    Route::put('/studio/{contentDraft}', [ContentStudioController::class, 'update'])->middleware('throttle:account-mutations')->name('studio.update');
+    Route::post('/discovery/capture', [ManualCaptureController::class, 'store'])->middleware('throttle:account-mutations')->name('discovery.capture');
     Route::get('/', OverviewController::class)->name('overview');
     Route::get('/leads', LeadInboxController::class)->name('leads.index');
     Route::patch('/leads/{lead}/status', LeadStatusController::class)->middleware('throttle:account-mutations')->name('leads.status');
@@ -67,6 +76,7 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
     Route::post('/comments', [CommentGeneratorController::class, 'store'])->middleware('throttle:account-mutations')->name('comments.store');
     Route::post('/comments/suggestions', [CommentSuggestionController::class, 'store'])->middleware('throttle:ai-generation')->name('comments.suggestions.store');
     Route::patch('/comments/suggestions/{suggestion}', [CommentSuggestionController::class, 'update'])->whereNumber('suggestion')->middleware('throttle:account-mutations')->name('comments.suggestions.update');
+    Route::post('/comments/suggestions/{suggestion}/replied', [CommentSuggestionController::class, 'replied'])->whereNumber('suggestion')->middleware('throttle:account-mutations')->name('comments.suggestions.replied');
     Route::post('/comments/generate', [CommentGeneratorController::class, 'generate'])->middleware('throttle:ai-generation')->name('comments.generate');
 
     Route::get('/reviews', [ReviewQueueController::class, 'index'])->name('reviews.index');

@@ -50,3 +50,28 @@ class SourceTest(unittest.TestCase):
             posts = main.scrape_http(source, 'website')
         self.assertEqual(len(posts), 2)
         self.assertEqual(posts[0]['external_post_id'], posts[1]['external_post_id'])
+
+
+class BoundaryContractTest(unittest.TestCase):
+    def test_invalid_source_ports_and_payloads_are_rejected(self):
+        for url in ["https://example.org:invalid", "https://[invalid", None]:
+            self.assertFalse(main.source_is_valid({"url": url}))
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "invalid.json"
+            for payload in [[], {"sources": "invalid"}, {"sources": [None]}]:
+                config.write_text(json.dumps(payload))
+                with self.assertRaises(ValueError):
+                    main.run("website", config)
+
+    def test_bounded_fetch_refuses_redirect_and_oversized_response(self):
+        for response in [httpx.Response(302, headers={"location": "https://127.0.0.1"}),
+                         httpx.Response(200, content=b"x" * 2_000_001)]:
+            with httpx.Client(transport=httpx.MockTransport(lambda _: response)) as client:
+                with self.assertRaises(ValueError):
+                    main.fetch_bounded(client, "https://example.org", 2)
+
+    def test_empty_config_is_explicit_and_does_not_fabricate_posts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "empty.json"
+            config.write_text(json.dumps({"sources": []}))
+            self.assertEqual(main.run("website", config), {"posts": [], "errors": [], "sources_configured": 0})

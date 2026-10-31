@@ -15,12 +15,13 @@ use Throwable;
 
 class RunThreadsDiscovery
 {
-    public function __construct(private readonly ThreadsSearchService $threads) {}
+    public function __construct(private readonly ThreadsSearchService $threads, private readonly RecordOpportunityAssessment $assessment) {}
 
     /** @return array{fetched: int, linked: int, added: int} */
     public function execute(SocialAccount $account, object $keyword): array
     {
         $runId = DB::table('discovery_runs')->insertGetId([
+            'source_type' => 'threads',
             'social_account_id' => $account->id,
             'search_keyword_id' => $keyword->id,
             'run_uuid' => (string) Str::uuid(),
@@ -39,6 +40,7 @@ class RunThreadsDiscovery
 
             return DB::transaction(function () use ($posts, $runId, $keyword, $fetched): array {
                 $added = 0;
+                $qualified = 0;
                 $linked = [];
 
                 foreach ($posts as $post) {
@@ -73,14 +75,22 @@ class RunThreadsDiscovery
                             'updated_at' => now(),
                         ]);
                         $linked[$storedPost->id] = true;
+                    } else {
+                        continue;
                     }
 
                     if (filled(trim((string) $storedPost->body))) {
+                        $classification = $this->assessment->record($storedPost, $keyword->phrase, 'threads', $keyword->id, $runId);
+                        $output = $classification;
+                        $qualified += (int) ($output['status'] === 'qualified');
                         $lead = Lead::query()->firstOrCreate([
                             'discovered_post_id' => $storedPost->id,
                         ], [
-                            'intent' => 'unclassified',
-                            'priority' => 'unscored',
+                            'intent' => $classification['intent'],
+                            'score' => $classification['score'],
+                            'service_category' => $classification['service_category'],
+                            'rationale' => $classification['rationale'],
+                            'priority' => $classification['score'] >= 80 ? 'high' : 'low',
                             'status' => 'new',
                         ]);
                         $added += (int) $lead->wasRecentlyCreated;
@@ -95,7 +105,7 @@ class RunThreadsDiscovery
                     'status' => 'completed',
                     'fetched_count' => $fetched,
                     'added_count' => $added,
-                    'relevant_count' => 0,
+                    'relevant_count' => $qualified,
                     'finished_at' => now(),
                     'updated_at' => now(),
                 ]);

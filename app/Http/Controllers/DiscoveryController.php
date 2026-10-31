@@ -25,6 +25,7 @@ class DiscoveryController extends Controller
             'track_keyword' => ['nullable', 'integer', 'min:1'],
             'track_source' => ['nullable', Rule::in(['threads', 'python', 'apify'])],
             'track_run' => ['nullable', 'integer', 'min:1'],
+            'category' => ['nullable', Rule::in(['business', 'community', 'not_relevant'])],
             'qualification' => ['nullable', Rule::in(['qualified', 'uncertain', 'rejected'])],
         ]);
 
@@ -62,6 +63,9 @@ class DiscoveryController extends Controller
         }
         if (filled($filters['qualification'] ?? null)) {
             $analyses->where('output->status', $filters['qualification']);
+        }
+        if (filled($filters['category'] ?? null)) {
+            $analyses->where('output->category', $filters['category']);
         }
         $postReviews = $analyses->latest('id')->paginate(15, ['*'], 'posts_page')->withQueryString();
 
@@ -109,6 +113,7 @@ class DiscoveryController extends Controller
             'apifyStartsToday' => (int) Cache::get('apify-probe-starts:'.now()->utc()->format('Y-m-d'), 0),
             'nextScans' => $nextScans,
             'accounts' => $accounts,
+            'lastThreadsRun' => DB::table('discovery_runs')->where('source_type', 'threads')->whereIn('status', ['completed', 'failed'])->latest('id')->first(),
             'postReviews' => $postReviews,
             'activeSources' => collect($sourceConfig['sources'] ?? [])->where('enabled', true)->pluck('id'),
             'lastSuccessfulScan' => DB::table('discovery_runs')->whereIn('status', ['completed', 'partial'])->max('finished_at'),

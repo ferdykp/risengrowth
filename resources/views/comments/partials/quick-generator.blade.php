@@ -28,9 +28,10 @@
                 <div>
                     <label for="quick-tone" class="rg-field-label">Gaya bahasa</label>
                     <select id="quick-tone" name="tone" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
-                        <option value="casual" @selected(old('tone', 'casual') === 'casual')>Santai — seperti ngobrol</option>
+                        <option value="casual" @selected(old('tone', 'casual') === 'casual')>Casual & Friendly — santai dan ramah</option>
                         <option value="friendly" @selected(old('tone') === 'friendly')>Friendly — ramah dan ringan</option>
-                        <option value="insightful" @selected(old('tone') === 'insightful')>Insight — satu sudut pandang yang membantu</option>
+                        <option value="insightful" @selected(old('tone') === 'insightful')>Helpful & Insightful — sudut pandang praktis</option>
+                        <option value="professional" @selected(old('tone') === 'professional')>Professional & Collaborative — hangat dan jelas</option>
                         <option value="direct" @selected(old('tone') === 'direct')>To the point — singkat dan jelas</option>
                         <option value="playful" @selected(old('tone') === 'playful')>Ringan — sedikit jenaka bila cocok</option>
                     </select>
@@ -68,6 +69,13 @@
                             <button type="submit" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">Simpan edit</button>
                         </div>
                     </form>
+                    @if($suggestion->replied_at)
+                        <p class="text-xs text-emerald-700" role="status">Sudah dibalas · dikonfirmasi manual</p>
+                    @else
+                        <form method="POST" action="{{ route('comments.suggestions.replied', $suggestion->id) }}" class="space-y-3 border-t pt-3">@csrf
+                        <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="confirm_replied" value="1" required><span>Saya sudah mengirim balasan ini sendiri.</span></label>
+                        <button class="rg-action">Mark as Replied</button></form>
+                    @endif
                 </article>
             @empty
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center"><span class="material-symbols-outlined text-4xl text-slate-300" aria-hidden="true">chat_bubble</span><p class="mt-3 font-semibold">Belum ada ide komentar</p><p class="mt-2 text-sm text-slate-500">Tempel postingan di sebelah kiri. Hasilnya muncul di sini dan siap kamu edit.</p></div>

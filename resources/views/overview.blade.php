@@ -1,23 +1,38 @@
 @extends('layouts.workspace')
-@section('title', 'Ikhtisar')
-@section('page_heading', 'Ikhtisar')
+@section('title', 'Today')
+@section('page_heading', 'Today')
 @section('content')
 <section class="">
 
 <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
 
-<div><div class="text-[11px] uppercase tracking-[.18em] text-slate-500 font-bold mb-2">RISENGROWTH / OVERVIEW</div>
+<div><div class="text-[11px] uppercase tracking-[.18em] text-slate-500 font-bold mb-2">SOCIAL GROWTH & OPPORTUNITY WORKSPACE</div>
 
-<h1 class="text-[30px] md:text-[38px] font-bold tracking-[-.045em] text-slate-950">Pusat Komando Prospek</h1>
+<h1 class="text-[30px] md:text-[38px] font-bold tracking-[-.045em] text-slate-950">Percakapan yang berarti, hari ini.</h1>
 
-<p class="text-slate-500 mt-2 text-sm">Pantau prospek, review komentar, dan aktivitas pencarian dalam satu tempat.</p></div>
+<p class="text-slate-500 mt-2 text-sm">Pilih siapa yang ingin kamu ajak ngobrol, siapkan balasan, dan lanjutkan relasi.</p></div>
 
-<div class="flex flex-wrap gap-2"><span class="inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">● Integrasi Threads belum dikonfigurasi</span><a class="px-4 py-2 rounded-xl text-sm bg-slate-950 text-white font-semibold" href="{{ route('discovery.index') }}">Eksplorasi prospek</a></div>
+<div class="flex flex-wrap gap-2"><a class="px-4 py-2 rounded-xl text-sm bg-slate-950 text-white font-semibold" href="{{ route('discovery.index') }}">Eksplorasi prospek</a></div>
 
 </div>
 
 </section>
 
+<section class="rg-panel bg-white border border-slate-200 rounded-2xl">
+<h2 class="text-lg font-bold">Today’s actions</h2>
+<div class="flex flex-wrap gap-3 mt-4">
+<a class="rg-action" href="{{ route('leads.index', ['status' => 'new', 'sort' => 'score_high']) }}">Review {{ $newLeadsCount }} peluang baru →</a>
+<a class="rg-action" href="{{ route('relationships.index') }}">Lanjutkan {{ $networkingCount }} relasi networking →</a>
+<a class="rg-action" href="{{ route('reviews.index', ['status' => 'pending_review']) }}">Review draft balasan →</a>
+<a class="rg-action" href="{{ route('studio.index') }}">Siapkan ide konten →</a>
+</div>
+</section>
+<section class="rg-panel bg-white border border-slate-200 rounded-2xl">
+<div class="flex justify-between gap-3"><h2 class="font-bold">Follow-up hari ini</h2><a class="text-sm underline" href="{{ route('relationships.index', ['due' => 1]) }}">Lihat semua</a></div>
+@forelse($followUps as $relationship)
+<a class="block border-b border-slate-100 py-4" href="{{ route('leads.show', $relationship->lead_id) }}"><strong>{{ $relationship->lead?->post?->username ?: 'Kontak' }}</strong> · {{ $relationship->follow_up_on->format('d M Y') }}<p class="text-sm text-slate-500">{{ \Illuminate\Support\Str::limit($relationship->notes, 140) }}</p></a>
+@empty<p class="py-5 text-sm text-slate-500">Tidak ada follow-up jatuh tempo. Jadwalkan dari detail relasi.</p>@endforelse
+</section>
 <section class="space-y-6">
 
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -42,15 +57,25 @@
 
 <section class="rg-panel xl:col-span-8 bg-white border border-slate-200 rounded-2xl p-6">
 
-<div class="flex items-center justify-between gap-3"><div><h2 class="text-lg font-bold text-slate-950">Prospek prioritas</h2><p class="text-xs text-slate-500 mt-1">Postingan relevan berdasarkan hasil analisis.</p></div><span class="text-[11px] font-semibold text-slate-500">{{ $priorityLeads->count() }} ditampilkan</span></div>
+<div class="flex items-center justify-between gap-3"><div><h2 class="text-lg font-bold text-slate-950">Prioritized inbox</h2><p class="text-xs text-slate-500 mt-1">Postingan relevan berdasarkan hasil analisis.</p></div><span class="text-[11px] font-semibold text-slate-500">{{ $priorityLeads->count() }} ditampilkan</span></div>
 
       @forelse($priorityLeads as $lead)
 
-        <div class="border-b border-slate-100 py-5 last:border-0"><div class="flex justify-between gap-4"><div><a class="text-sm font-semibold text-slate-900 hover:text-blue-700 hover:underline" href="{{ route('leads.show', $lead) }}">{{ '@'.($lead->post?->username ?: 'pengguna') }} ↗</a><p class="mt-1 text-sm text-slate-600 line-clamp-2">{{ $lead->post?->body ?: 'Postingan tanpa teks' }}</p></div><span class="shrink-0 bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-lg h-fit">{{ $lead->score ?? '—' }}/100</span></div></div>
+        <div class="border-b border-slate-100 py-5 last:border-0"><div class="flex justify-between gap-4"><div><a class="text-sm font-semibold text-slate-900 hover:text-blue-700 hover:underline" href="{{ route('leads.show', $lead) }}">{{ '@'.($lead->post?->username ?: 'pengguna') }} ↗</a><p class="mt-1 text-sm text-slate-600 line-clamp-2">{{ $lead->post?->body ?: 'Postingan tanpa teks' }}</p></div><span class="shrink-0 bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-lg h-fit">{{ $lead->score ?? '—' }}/100</span></div>
+<p class="text-xs text-slate-500 mt-2">{{ ucfirst($lead->post?->analyses->first()?->output['category'] ?? 'Belum diklasifikasi') }} · {{ $lead->post?->analyses->first()?->output['source'] ?? $lead->post?->platform }} · {{ $lead->post?->first_discovered_at?->diffForHumans() }}</p>
+<div class="flex flex-wrap gap-2 mt-3">
+<a class="rg-action text-xs" href="{{ route('leads.show', $lead) }}">Review</a>
+<a class="rg-action text-xs" href="{{ route('comments.index', ['lead' => $lead->id]) }}">Generate Reply</a>
+<a class="rg-action text-xs" href="{{ route('leads.show', $lead) }}#relationship">Relasi & follow-up</a>
+@foreach(['saved' => 'Save', 'dismissed' => 'Dismiss'] as $status => $label)
+<form method="POST" action="{{ route('leads.status', $lead) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $status }}"><button class="rg-action text-xs">{{ $label }}</button></form>
+@endforeach
+@if($lead->post?->permalink && parse_url($lead->post->permalink, PHP_URL_SCHEME) === 'https')<a class="rg-action text-xs" href="{{ $lead->post->permalink }}" target="_blank" rel="noopener noreferrer">Postingan asli ↗</a>@endif
+</div></div>
 
       @empty
 
-       <div class="py-14 flex flex-col items-center text-center"><span class="material-symbols-outlined text-[38px] text-slate-300">radar</span><h3 class="text-base font-semibold mt-3 text-slate-900">Belum ada prospek</h3><p class="text-sm text-slate-500 mt-2 max-w-sm">Setelah koneksi Threads dan pencarian dijalankan, prospek berprioritas tinggi akan tampil di sini.</p></div>
+       <div class="py-14 flex flex-col items-center text-center"><span class="material-symbols-outlined text-[38px] text-slate-300">radar</span><h3 class="text-base font-semibold mt-3 text-slate-900">Belum ada prospek</h3><p class="text-sm text-slate-500 mt-2 max-w-sm">Jalankan discovery dari sumber yang tersedia atau capture postingan secara manual.</p></div>
 
       @endforelse
 
@@ -64,7 +89,7 @@
 
       @empty
 
-       <div class="flex flex-col items-center text-center py-12"><span class="material-symbols-outlined text-[34px] text-slate-300">task_alt</span><p class="font-semibold text-sm text-slate-900 mt-3">Belum ada draft untuk direview</p><p class="text-xs text-slate-500 mt-2">Draft AI akan muncul setelah fitur analisis dan komentar tersambung.</p></div>
+       <div class="flex flex-col items-center text-center py-12"><span class="material-symbols-outlined text-[34px] text-slate-300">task_alt</span><p class="font-semibold text-sm text-slate-900 mt-3">Belum ada draft untuk direview</p><p class="text-xs text-slate-500 mt-2">Buat draft dari percakapan yang ingin kamu tanggapi.</p></div>
 
       @endforelse
 
