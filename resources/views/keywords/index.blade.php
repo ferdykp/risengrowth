@@ -8,7 +8,7 @@
 
 <div class="grid sm:grid-cols-2 gap-4"><div class="rg-panel bg-white rounded-2xl border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">Total keyword</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ $totalCount }}</p></div><div class="rg-panel bg-white rounded-2xl border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">Keyword aktif</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ $activeCount }}</p></div></div>
 <section class="rg-panel bg-white border border-slate-200 rounded-2xl p-5 md:p-6">
-<div class="flex flex-col md:flex-row justify-between gap-3 mb-5"><h2 class="text-lg font-bold">Daftar keyword</h2><form method="GET" action="{{ route('keywords.index') }}" class="flex flex-wrap gap-2"><input aria-label="Cari keyword" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari keyword..." class="rounded-lg border border-slate-200 px-3 py-2 text-sm min-w-0" /><select name="category" aria-label="Kategori" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Semua kategori</option>@foreach(['direct_demand'=>'Kebutuhan langsung','business_pain'=>'Masalah bisnis','developer_community'=>'Komunitas developer'] as $code=>$name)<option value="{{ $code }}" @selected(($filters['category'] ?? '')===$code)>{{ $name }}</option>@endforeach</select><select name="status" aria-label="Status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Semua status</option><option value="active" @selected(($filters['status'] ?? '')==='active')>Aktif</option><option value="inactive" @selected(($filters['status'] ?? '')==='inactive')>Nonaktif</option><option value="deleted" @selected(($filters['status'] ?? '')==='deleted')>Arsip</option></select><button class="px-4 py-2 rounded-lg bg-slate-950 text-white text-sm font-semibold">Filter</button><a href="{{ route('keywords.index') }}" class="px-3 py-2 text-sm text-slate-500">Reset</a></form></div>
+<div class="space-y-4 mb-5"><h2 class="text-lg font-bold">Daftar keyword</h2><form method="GET" action="{{ route('keywords.index') }}" class="rg-keyword-filters"><input aria-label="Cari keyword" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari keyword..." class="rounded-lg border border-slate-200 px-3 py-2 text-sm min-w-0" /><select name="category" aria-label="Kategori" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Semua kategori</option>@foreach(['direct_demand'=>'Kebutuhan langsung','business_pain'=>'Masalah bisnis','developer_community'=>'Komunitas developer'] as $code=>$name)<option value="{{ $code }}" @selected(($filters['category'] ?? '')===$code)>{{ $name }}</option>@endforeach</select><select name="status" aria-label="Status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">Semua status</option><option value="active" @selected(($filters['status'] ?? '')==='active')>Aktif</option><option value="inactive" @selected(($filters['status'] ?? '')==='inactive')>Nonaktif</option><option value="deleted" @selected(($filters['status'] ?? '')==='deleted')>Arsip</option></select><button class="px-4 py-2 rounded-lg bg-slate-950 text-white text-sm font-semibold">Filter</button><a href="{{ route('keywords.index') }}" class="px-3 py-2 text-sm text-slate-500">Reset</a></form></div>
 <div class="space-y-2">
 @forelse($keywords as $keyword)
 <article class="border border-slate-200 rounded-xl px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div class="min-w-0"><p class="font-semibold text-sm break-words">{{ $keyword->phrase }}</p><p class="text-xs text-slate-500 mt-1">{{ ['direct_demand'=>'Kebutuhan langsung','business_pain'=>'Masalah bisnis','developer_community'=>'Komunitas developer'][$keyword->category] ?? $keyword->category }} · Threads · {{ $keyword->search_type }} @if($keyword->interval_minutes) · setiap {{ $keyword->interval_minutes }} menit @endif</p>@if($keyword->notes)<p class="text-xs text-slate-500 mt-2 break-words">{{ $keyword->notes }}</p>@endif</div><div class="flex items-center gap-2 flex-wrap"><span class="text-xs rounded-full px-2.5 py-1 font-semibold {{ $keyword->trashed() ? 'bg-slate-100 text-slate-600' : ($keyword->enabled ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600') }}">{{ $keyword->trashed() ? 'Arsip' : ($keyword->enabled ? 'Aktif' : 'Nonaktif') }}</span>
@@ -21,8 +21,26 @@
 @empty<div class="text-center py-16"><span class="material-symbols-outlined text-4xl text-slate-300">manage_search</span><p class="font-semibold mt-2">Belum ada keyword</p><p class="text-sm text-slate-500 mt-1">Tambah keyword untuk menyiapkan pencarian prospek.</p></div>
 @endforelse</div><div class="mt-5">{{ $keywords->links() }}</div></section>
 </section>
-<dialog id="create-keyword" class="rounded-2xl p-0 w-[min(95vw,530px)] backdrop:bg-slate-950/40"><form method="POST" action="{{ route('keywords.store') }}" class="p-6 space-y-4">@csrf<h2 class="text-xl font-bold">Tambah keyword</h2><p class="text-sm text-slate-500">Keyword tidak langsung menjalankan pencarian sampai integrasi aktif.</p>@include('keywords.partials.fields',['prefix'=>'create'])<div class="flex justify-end gap-2 pt-3"><button type="button" onclick="document.getElementById('create-keyword').close()" class="border rounded-lg px-4 py-2 text-sm">Batal</button><button type="submit" class="rounded-lg bg-slate-950 text-white px-4 py-2 text-sm font-semibold">Simpan keyword</button></div></form></dialog>
-<dialog id="edit-keyword" class="rounded-2xl p-0 w-[min(95vw,530px)] backdrop:bg-slate-950/40"><form id="edit-keyword-form" method="POST" action="" class="p-6 space-y-4">@csrf @method('PUT')<h2 class="text-xl font-bold">Edit keyword</h2>@include('keywords.partials.fields',['prefix'=>'edit'])<div class="flex justify-end gap-2 pt-3"><button type="button" onclick="document.getElementById('edit-keyword').close()" class="border rounded-lg px-4 py-2 text-sm">Batal</button><button type="submit" class="rounded-lg bg-slate-950 text-white px-4 py-2 text-sm font-semibold">Simpan perubahan</button></div></form></dialog>
+<x-modal id="create-keyword" title="Tambah keyword" description="Tentukan topik dan pengaturan pencarian. Keyword akan digunakan saat discovery dijalankan.">
+    <form method="POST" action="{{ route('keywords.store') }}" class="rg-dialog-form">
+        @csrf
+        <div class="rg-dialog-body">@include('keywords.partials.fields', ['prefix' => 'create'])</div>
+        <footer class="rg-dialog-footer">
+            <button type="button" data-dialog-close class="rg-button-secondary">Batal</button>
+            <button type="submit" class="rg-button-primary">Simpan keyword</button>
+        </footer>
+    </form>
+</x-modal>
+<x-modal id="edit-keyword" title="Edit keyword" description="Sesuaikan topik, kategori, dan jadwal pencarian keyword ini.">
+    <form id="edit-keyword-form" method="POST" action="" class="rg-dialog-form">
+        @csrf @method('PUT')
+        <div class="rg-dialog-body">@include('keywords.partials.fields', ['prefix' => 'edit'])</div>
+        <footer class="rg-dialog-footer">
+            <button type="button" data-dialog-close class="rg-button-secondary">Batal</button>
+            <button type="submit" class="rg-button-primary">Simpan perubahan</button>
+        </footer>
+    </form>
+</x-modal>
 @endsection
 
 @push('scripts')

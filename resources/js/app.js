@@ -13,3 +13,9 @@ document.addEventListener('submit', (event) => {
     button.setAttribute('aria-busy', 'true');
     button.textContent = 'Memproses…';
 });
+
+// Native dialog retains Escape handling, focus trapping, and focus restoration.
+document.addEventListener('click', (event) => {
+    const close = event.target.closest('[data-dialog-close]');
+    if (close) close.closest('dialog')?.close();
+});

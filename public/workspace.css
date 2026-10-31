@@ -12,7 +12,7 @@
     padding: 28px var(--rg-gutter) 48px;
 }
 
-.rg-page > :not([hidden]) + :not([hidden]) {
+.rg-page > :not([hidden]):not(dialog) + :not([hidden]):not(dialog) {
     margin-top: var(--rg-space);
 }
 
@@ -145,3 +145,63 @@ body { background: #F2EFE8; color: #111111; }
 .rg-action { display:inline-flex; align-items:center; min-height:44px; padding:10px 16px; border:1px solid #ded9cf; border-radius:12px; font-size:14px; }
 .rg-action:hover { border-color:#FF4F00; }
 :where(.rg-page, .rg-auth) :where(a,button,input,select,textarea,summary):focus-visible { outline-color:#FF4F00; }
+
+/* Native dialogs live in the top layer; page spacing must never position them. */
+html:has(dialog[open]) { overflow: hidden; }
+.rg-dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: min(560px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100dvh - 48px);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: #fff;
+    color: #111111;
+    box-shadow: 0 24px 80px -16px rgb(15 23 42 / .28);
+}
+.rg-dialog[open] { display: flex; flex-direction: column; }
+.rg-dialog::backdrop { background: rgb(15 23 42 / .45); backdrop-filter: blur(3px); }
+.rg-dialog-header { display: flex; flex: none; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 24px; border-bottom: 1px solid #eef0f3; }
+.rg-dialog-header h2 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; letter-spacing: -.025em; }
+.rg-dialog-header p { margin: 8px 0 0; max-width: 430px; font-size: 13px; line-height: 1.65; color: #64748b; }
+.rg-dialog-close { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; margin: -4px -4px 0 0; border-radius: 10px; color: #64748b; cursor: pointer; }
+.rg-dialog-close:hover { background: #f1f5f9; color: #111111; }
+.rg-dialog-form { display: flex; flex-direction: column; min-height: 0; margin: 0; }
+.rg-dialog-body { display: grid; gap: 20px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 24px; }
+.rg-dialog-body label { margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #334155; }
+.rg-dialog-body :where(input:not([type="hidden"]), select, textarea) { width: 100%; padding: 11px 12px; border: 1px solid #dce1e8; border-radius: 10px; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgb(15 23 42 / .025); }
+.rg-dialog-body :where(input, select) { height: 44px; }
+.rg-dialog-body select {
+    appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='1.8'%3E%3Cpath d='m6 9 6 6 6-6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+.rg-dialog-body textarea { min-height: 88px; }
+.rg-dialog-body :where(input, textarea)::placeholder { color: #94a3b8; }
+.rg-dialog-body :where(input, select, textarea):focus-visible { outline: 2px solid #ff4f00; outline-offset: 2px; }
+.rg-dialog-footer { display: flex; flex: none; justify-content: flex-end; gap: 12px; padding: 18px 24px; border-top: 1px solid #eef0f3; background: #fafbfc; }
+.rg-button-primary, .rg-button-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; border: 1px solid transparent; border-radius: 10px; font-size: 13px; line-height: 1.5; font-weight: 600; cursor: pointer; }
+.rg-button-primary { background: #111111; color: #fff; }
+.rg-button-primary:hover { background: #303030; }
+.rg-button-secondary { background: #fff; color: #334155; border-color: #dce1e8; }
+.rg-button-secondary:hover { background: #f1f5f9; }
+.rg-button-primary:disabled { cursor: wait; opacity: .65; }
+.rg-keyword-filters { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(140px, .7fr) auto auto; align-items: center; gap: 12px; }
+.rg-keyword-filters :where(input, select) { width: 100%; }
+@media (max-width: 767px) {
+    .rg-keyword-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rg-keyword-filters input { grid-column: 1 / -1; }
+}
+@media (max-width: 479px) {
+    .rg-dialog { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 16px; }
+    .rg-dialog-header { padding: 20px; gap: 12px; }
+    .rg-dialog-body { padding: 20px; gap: 16px; }
+    .rg-dialog-footer { padding: 16px 20px; }
+    .rg-dialog-footer button { flex: 1; padding-inline: 10px; }
+}
