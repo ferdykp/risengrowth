@@ -216,7 +216,38 @@ class ApifyThreadsProviderTest extends TestCase
             app(ApifyThreadsProvider::class)->posts('run123', []);
             $this->fail('A dataset with no usable rows must not look like an empty search.');
         } catch (ApifyDiscoveryException $exception) {
-            $this->assertSame('INVALID_DATASET', $exception->reason);
+            $this->assertSame('INVALID_POST', $exception->reason);
+        }
+    }
+
+    public function test_unknown_hint_is_skipped_when_the_run_also_has_posts(): void
+    {
+        Http::fake([
+            'api.apify.com/v2/actor-runs/run123' => Http::response($this->runPayload()),
+            'api.apify.com/v2/actors/openclawai~threads-scraper' => Http::response(['data' => ['id' => 'actor123']]),
+            'api.apify.com/v2/datasets/dataset123/items*' => Http::response([['platform' => 'threads', 'item_type' => 'hint', 'error_message' => 'Reworded plan notice'], $this->entry()]),
+        ]);
+
+        $result = app(ApifyThreadsProvider::class)->posts('run123', []);
+
+        $this->assertCount(1, $result['posts']);
+        $this->assertSame(1, $result['skipped_invalid']);
+    }
+
+    public function test_hint_only_run_reports_the_actor_message(): void
+    {
+        Http::fake([
+            'api.apify.com/v2/actor-runs/run123' => Http::response($this->runPayload()),
+            'api.apify.com/v2/actors/openclawai~threads-scraper' => Http::response(['data' => ['id' => 'actor123']]),
+            'api.apify.com/v2/datasets/dataset123/items*' => Http::response([['platform' => 'threads', 'item_type' => 'hint', 'error_message' => 'Daily limit reached']]),
+        ]);
+
+        try {
+            app(ApifyThreadsProvider::class)->posts('run123', []);
+            $this->fail('A hint-only run must not look like an empty search.');
+        } catch (ApifyDiscoveryException $exception) {
+            $this->assertSame('ACTOR_OUTPUT_ERROR', $exception->reason);
+            $this->assertStringContainsString('Daily limit reached', $exception->getMessage());
         }
     }
 

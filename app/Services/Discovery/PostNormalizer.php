@@ -42,7 +42,8 @@ class PostNormalizer
     public function fromApify(array $entry, array $excludedUsernames): ?array
     {
         if (in_array($entry['item_type'] ?? null, ['hint', 'error'], true)) {
-            throw new ApifyDiscoveryException('ACTOR_OUTPUT_ERROR', 'Actor mengembalikan baris hint/error. Periksa run di Apify; ini bukan hasil pencarian kosong yang terverifikasi.');
+            $actorMessage = is_string($entry['error_message'] ?? null) ? mb_substr(strip_tags($entry['error_message']), 0, 300) : 'tanpa pesan';
+            throw new ApifyDiscoveryException('ACTOR_OUTPUT_ERROR', 'Actor mengembalikan baris hint/error: '.$actorMessage);
         }
         if (($entry['platform'] ?? null) !== 'threads' || ($entry['item_type'] ?? null) !== 'post') {
             throw new ApifyDiscoveryException('INVALID_POST', 'Dataset Actor tidak sesuai kontrak postingan Threads.');
