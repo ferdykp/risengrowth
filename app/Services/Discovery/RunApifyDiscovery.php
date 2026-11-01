@@ -23,20 +23,20 @@ class RunApifyDiscovery
         private readonly ApifyDiscoverySettings $settings,
     ) {}
 
-    public function enqueue(int $keywordId, ?string $existingRunId = null, bool $manual = false): object
+    public function enqueue(int $keywordId, ?string $existingRunId = null): object
     {
         $lock = Cache::lock('apify-discovery-enqueue', 15);
         if (! $lock->get()) {
             throw new ApifyDiscoveryException('ENQUEUE_BUSY', 'Permintaan discovery lain sedang masuk. Coba lagi sebentar.');
         }
         try {
-            return $this->enqueueLocked($keywordId, $existingRunId, $manual);
+            return $this->enqueueLocked($keywordId, $existingRunId);
         } finally {
             $lock->release();
         }
     }
 
-    private function enqueueLocked(int $keywordId, ?string $existingRunId, bool $manual): object
+    private function enqueueLocked(int $keywordId, ?string $existingRunId): object
     {
         if (blank(config('services.apify.token'))) {
             throw new ApifyDiscoveryException('TOKEN_MISSING', 'APIFY_TOKEN belum tersedia di server.');
@@ -44,7 +44,7 @@ class RunApifyDiscovery
         if ($existingRunId !== null && ! preg_match('/\A[a-zA-Z0-9]{1,64}\z/', $existingRunId)) {
             throw new ApifyDiscoveryException('INVALID_ID', 'ID run Apify tidak valid.');
         }
-        $run = DB::transaction(function () use ($keywordId, $existingRunId, $manual): object {
+        $run = DB::transaction(function () use ($keywordId, $existingRunId): object {
             $keyword = DB::table('search_keywords')->where('id', $keywordId)->where('enabled', true)
                 ->whereNull('deleted_at')->lockForUpdate()->first();
             if (! $keyword) {
@@ -99,10 +99,6 @@ class RunApifyDiscovery
                 $startsToday = (int) Cache::get('apify-probe-starts:'.now()->utc()->format('Y-m-d'), 0);
                 if (max($attemptsToday, $startsToday) >= $settings->daily_runs) {
                     throw new ApifyDiscoveryException('DAILY_LIMIT', 'Batas run harian UTC tercapai. Impor run lama tetap tersedia.');
-                }
-                $last = DB::table('discovery_runs')->where('source_type', 'apify')->where('search_keyword_id', $keywordId)->latest('id')->first();
-                if (! $manual && $last && Carbon::parse($last->created_at)->addMinutes(max($settings->min_interval_minutes, $keyword->interval_minutes ?? $settings->min_interval_minutes))->isFuture()) {
-                    throw new ApifyDiscoveryException('INTERVAL_NOT_DUE', 'Keyword ini belum jatuh tempo. Tunggu interval pencarian atau impor run yang sudah ada.');
                 }
             }
             $id = DB::table('discovery_runs')->insertGetId(['social_account_id' => null, 'source_type' => 'apify',

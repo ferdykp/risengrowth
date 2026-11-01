@@ -8,7 +8,6 @@ use App\Services\Discovery\IndonesianPostPreference;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -98,12 +97,6 @@ class DiscoveryController extends Controller
         $sourceConfig = is_array($sourceConfig) ? $sourceConfig : [];
 
         $apifySettings = app(ApifyDiscoverySettings::class)->get();
-        $nextScans = [];
-        $lastScans = DB::table('discovery_runs')->where('source_type', 'apify')->select('search_keyword_id')->selectRaw('MAX(created_at) as last_attempt')->groupBy('search_keyword_id')->pluck('last_attempt', 'search_keyword_id');
-        foreach ($keywords as $keyword) {
-            $last = $lastScans[$keyword->id] ?? null;
-            $nextScans[$keyword->id] = $last ? Carbon::parse($last)->addMinutes(max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? $apifySettings->min_interval_minutes)) : now();
-        }
 
         return view('discovery.index', [
             'apifySettings' => $apifySettings,
@@ -111,7 +104,6 @@ class DiscoveryController extends Controller
             'apifyUsage' => Cache::get('apify-last-account-usage'),
             'apifyPaused' => Cache::has('apify-probe-paused'),
             'apifyStartsToday' => (int) Cache::get('apify-probe-starts:'.now()->utc()->format('Y-m-d'), 0),
-            'nextScans' => $nextScans,
             'accounts' => $accounts,
             'lastThreadsRun' => DB::table('discovery_runs')->where('source_type', 'threads')->whereIn('status', ['completed', 'failed'])->latest('id')->first(),
             'postReviews' => $postReviews,

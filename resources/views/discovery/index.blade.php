@@ -220,7 +220,7 @@
 
         <section class="rg-panel mb-6 rounded-xl border border-slate-200 bg-white p-5 space-y-3">
             <h2 class="text-lg font-bold">Threads via Apify</h2>
-            <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'APIFY_TOKEN belum diisi di server' }} · Provider {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }} · Otomatis {{ $apifySettings->automation_enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena kuota/rate limit' : '' }}</p>
+            <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'APIFY_TOKEN belum diisi di server' }} · Provider {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena kuota/rate limit' : '' }}</p>
             <p class="text-xs text-slate-600">Maksimal 10 postingan per run. Batas start {{ $apifySettings->daily_runs }}/hari UTC (reset 07.00 WIB); sudah dicoba {{ $apifyStartsToday }}. Batas biaya per run USD {{ config('services.apify.probe_max_charge_usd') }}; budget bulanan aplikasi USD {{ config('services.apify.monthly_budget_usd') }}.</p>
             <p class="text-xs text-slate-500">Run baru memakai kredit Apify. Untuk hasil yang sudah ada, masukkan ID run lama dan pilih keyword yang sama. Impor tidak memulai Actor baru. Saldo kredit gratis harus diperiksa di billing Apify.</p>
             @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir dilaporkan USD {{ $apifyUsage['usage_usd'] }} / limit akun USD {{ $apifyUsage['limit_usd'] }} pada {{ \Illuminate\Support\Carbon::parse($apifyUsage['checked_at'])->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Ini bukan saldo kredit gratis real-time.</p>@endif
@@ -228,16 +228,11 @@
                 <form method="POST" action="{{ route('discovery.apify.settings') }}" class="rg-provider-settings">
                     @csrf @method('PATCH')
                     <label class="rg-provider-toggle text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan Apify</label>
-                    <label class="rg-provider-toggle text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Cari otomatis</label>
                     <label class="rg-provider-number">Batas start/hari UTC<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
-                    <label class="rg-provider-number">Interval minimum otomatis (menit)<input type="number" name="min_interval_minutes" min="1" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
                     <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan pengaturan</button>
                 </form>
             @endif
-            <p class="text-xs text-slate-500">Pencarian manual bisa dijalankan sebelum jadwal otomatis, selama tidak ada proses aktif dan batas run/budget masih tersedia. Jadwal otomatis memakai interval yang lebih besar antara pengaturan di sini dan interval di Kata Kunci. Interval keyword yang kosong mengikuti pengaturan ini.</p>
-            <details class="text-xs text-slate-600"><summary class="cursor-pointer font-semibold">Jadwal keyword aktif</summary>
-                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? $apifySettings->min_interval_minutes) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Eksekusi mengikuti kuota harian, worker, dan status otomatis.</p>@endforeach
-            </details>
+            <p class="text-xs text-slate-500">Pencarian hanya berjalan saat dimulai manual, selama tidak ada proses aktif dan batas run/budget masih tersedia.</p>
             <a href="{{ route('leads.index', ['source' => 'apify']) }}" class="inline-block text-sm font-semibold text-blue-700 underline">Buka lead hasil Apify →</a>
         </section>
 
