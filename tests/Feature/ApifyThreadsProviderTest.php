@@ -185,6 +185,41 @@ class ApifyThreadsProviderTest extends TestCase
         Http::assertSentCount(3);
     }
 
+    public function test_row_without_text_is_skipped_without_losing_the_other_posts(): void
+    {
+        $textless = $this->entry('imageonly', '555');
+        unset($textless['description']);
+        Http::fake([
+            'api.apify.com/v2/actor-runs/run123' => Http::response($this->runPayload()),
+            'api.apify.com/v2/actors/openclawai~threads-scraper' => Http::response(['data' => ['id' => 'actor123']]),
+            'api.apify.com/v2/datasets/dataset123/items*' => Http::response([$textless, $this->entry()]),
+        ]);
+
+        $result = app(ApifyThreadsProvider::class)->posts('run123', []);
+
+        $this->assertCount(1, $result['posts']);
+        $this->assertSame('customer', $result['posts'][0]['username']);
+        $this->assertSame(1, $result['skipped_invalid']);
+    }
+
+    public function test_dataset_with_only_invalid_rows_fails_instead_of_looking_empty(): void
+    {
+        $textless = $this->entry();
+        unset($textless['description']);
+        Http::fake([
+            'api.apify.com/v2/actor-runs/run123' => Http::response($this->runPayload()),
+            'api.apify.com/v2/actors/openclawai~threads-scraper' => Http::response(['data' => ['id' => 'actor123']]),
+            'api.apify.com/v2/datasets/dataset123/items*' => Http::response([$textless]),
+        ]);
+
+        try {
+            app(ApifyThreadsProvider::class)->posts('run123', []);
+            $this->fail('A dataset with no usable rows must not look like an empty search.');
+        } catch (ApifyDiscoveryException $exception) {
+            $this->assertSame('INVALID_DATASET', $exception->reason);
+        }
+    }
+
     #[TestWith(['FAILED'])]
     #[TestWith(['TIMED-OUT'])]
     #[TestWith(['RUNNING'])]

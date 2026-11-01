@@ -20,6 +20,9 @@ class QualificationTest extends TestCase
     #[TestWith(['Website framework news', 'website', 'rejected', 'website'])]
     #[TestWith(['Looking for a website tutorial', 'website', 'uncertain', 'website'])]
     #[TestWith(['A positive result', 'pos', 'rejected', null])]
+    #[TestWith(['Butuh bikin website buat toko saya', 'butuh website', 'qualified', 'website'])]
+    #[TestWith(['Butuh aplikasi untuk toko saya', 'butuh website', 'rejected', null])]
+    #[TestWith(['Aku butuh websitenya segera', 'website', 'qualified', 'website'])]
     public function test_classifies_evidence_and_preserves_uncertainty(string $body, string $keyword, string $status, ?string $service): void
     {
         $result = app(QualifyDiscoveredPost::class)->classify($body, $keyword);

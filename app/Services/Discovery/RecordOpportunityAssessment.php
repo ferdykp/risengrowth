@@ -13,6 +13,11 @@ class RecordOpportunityAssessment
     public function record(DiscoveredPost $post, string $keyword, string $source, int $keywordId, int $runId): array
     {
         $classification = $this->qualifier->classify($post->body ?? '', $keyword);
+        if ($source === 'apify' && $classification['status'] === 'qualified'
+            && $post->posted_at?->lt(now()->subDays((int) config('services.apify.max_post_age_days')))) {
+            $classification = array_merge($classification, ['status' => 'uncertain', 'intent' => 'uncertain', 'confidence' => 'low',
+                'rationale' => 'Buyer request is too old to act on automatically; manual review required.']);
+        }
         $output = $classification + ['source' => $source, 'keyword_id' => $keywordId, 'run_id' => $runId];
         $previous = $post->analyses()->first()?->output;
         if (isset($previous['reviewer_id'])) {

@@ -48,7 +48,7 @@ class ApifyWebDiscoveryTest extends TestCase
     {
         return ['platform' => 'threads', 'item_type' => 'post', 'item_id' => $id,
             'description' => $body, 'author_username' => $username, 'url' => 'https://www.threads.net/@'.$username.'/post/Abc'.$id,
-            'created_at' => '2026-10-20T12:00:00+00:00', 'mode' => 'search_latest', 'source_input' => 'website'];
+            'created_at' => now()->subDay()->toIso8601String(), 'mode' => 'search_latest', 'source_input' => 'website'];
     }
 
     /** @param array<int, array<string, mixed>> $entries */
@@ -184,6 +184,52 @@ class ApifyWebDiscoveryTest extends TestCase
         $this->assertDatabaseCount('discovery_runs', 1);
         $this->assertDatabaseHas('discovery_runs', ['search_keyword_id' => $keyword->id, 'status' => 'queued']);
         Queue::assertPushed(RunApifyDiscoveryJob::class, 2);
+    }
+
+    public function test_old_buyer_post_goes_to_review_instead_of_becoming_a_lead(): void
+    {
+        $keyword = $this->keyword(User::factory()->admin()->create());
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        $old = $this->postEntry('1', 'Need a website for my business');
+        $old['created_at'] = now()->subDays(15)->toIso8601String();
+        $this->fakeResults([$old, $this->postEntry('2', 'Need a website for my shop')]);
+        $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, 'remote123');
+
+        (new RunApifyDiscoveryJob($run->id))->handle(app(RunApifyDiscovery::class));
+
+        $this->assertDatabaseCount('discovered_posts', 2);
+        $this->assertDatabaseCount('leads', 1);
+        $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'completed', 'relevant_count' => 1, 'uncertain_count' => 1, 'added_count' => 1]);
+    }
+
+    public function test_never_run_keyword_gets_the_daily_run_before_older_keywords(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $previous = $this->keyword($admin, 'website');
+        DB::table('search_keywords')->where('id', $previous->id)->update(['last_ran_at' => now()->subDay()]);
+        $neverRun = $this->keyword($admin, 'kasir');
+        $this->enable(true);
+        Queue::fake([RunApifyDiscoveryJob::class]);
+
+        $this->artisan('growth:apify-dispatch')->assertSuccessful();
+
+        $this->assertDatabaseCount('discovery_runs', 1);
+        $this->assertDatabaseHas('discovery_runs', ['search_keyword_id' => $neverRun->id]);
+    }
+
+    public function test_failed_start_moves_keyword_behind_others_in_rotation(): void
+    {
+        $this->freezeSecond();
+        $keyword = $this->keyword(User::factory()->admin()->create());
+        $this->enable();
+        Queue::fake([RunApifyDiscoveryJob::class]);
+        Http::fake(['api.apify.com/v2/users/me/limits' => Http::failedConnection()]);
+        $run = app(RunApifyDiscovery::class)->enqueue($keyword->id);
+
+        (new RunApifyDiscoveryJob($run->id))->handle(app(RunApifyDiscovery::class));
+
+        $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'failed']);
+        $this->assertTrue($keyword->fresh()->last_ran_at->equalTo(now()));
     }
 
     public function test_json_status_tracks_exact_run_and_preserves_api_key_privacy(): void

@@ -34,7 +34,7 @@ class DispatchApifyDiscovery extends Command
             return self::SUCCESS;
         }
         $keywords = DB::table('search_keywords')->where('enabled', true)->where('platform', 'threads')->whereNull('deleted_at')
-            ->orderBy('last_ran_at')->orderBy('id')->get();
+            ->orderByRaw('last_ran_at IS NOT NULL')->orderBy('last_ran_at')->orderBy('id')->get();
         $dispatched = 0;
         foreach ($keywords as $keyword) {
             $latest = DB::table('discovery_runs')->where('source_type', 'apify')->where('search_keyword_id', $keyword->id)->latest('id')->first();

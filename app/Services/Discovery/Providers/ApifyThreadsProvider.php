@@ -8,6 +8,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ApifyThreadsProvider
 {
@@ -87,7 +88,7 @@ class ApifyThreadsProvider
     }
 
     /** @param array<int, string> $excludedUsernames
-     * @return array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int, empty_notices: int}
+     * @return array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int, empty_notices: int, skipped_invalid: int}
      */
     public function posts(string $runId, array $excludedUsernames, string $keyword = 'website'): array
     {
@@ -105,6 +106,7 @@ class ApifyThreadsProvider
         $notices = 0;
         $postRows = 0;
         $emptyNotices = 0;
+        $skipped = 0;
         foreach ($entries as $entry) {
             if (! is_array($entry)) {
                 throw new ApifyDiscoveryException('INVALID_DATASET', 'Baris dataset bukan objek.');
@@ -130,7 +132,16 @@ class ApifyThreadsProvider
                 && (($entry['mode'] ?? null) !== 'search_latest' || ($entry['source_input'] ?? null) !== $keyword)) {
                 throw new ApifyDiscoveryException('WRONG_QUERY', 'Dataset bukan hasil search_latest untuk keyword yang diuji.');
             }
-            $post = $this->normalizer->fromApify($entry, $excludedUsernames);
+            try {
+                $post = $this->normalizer->fromApify($entry, $excludedUsernames);
+            } catch (ApifyDiscoveryException $exception) {
+                if (! in_array($exception->reason, ['INVALID_POST', 'INVALID_POST_URL', 'INVALID_POST_DATE'], true)) {
+                    throw $exception;
+                }
+                $skipped++;
+
+                continue;
+            }
             if ($post === null) {
                 $own++;
 
@@ -148,7 +159,14 @@ class ApifyThreadsProvider
             throw new ApifyDiscoveryException('INVALID_DATASET', 'Dataset berisi postingan sekaligus informasi tidak ada hasil.');
         }
 
-        return ['posts' => array_values($posts), 'excluded_own' => $own, 'duplicates' => $duplicates, 'received' => count($entries), 'plan_notices' => $notices, 'empty_notices' => $emptyNotices];
+        if ($skipped > 0 && $posts === [] && $own === 0) {
+            throw new ApifyDiscoveryException('INVALID_DATASET', 'Semua baris dataset tidak valid. Format output Actor mungkin berubah.');
+        }
+        if ($skipped > 0) {
+            Log::warning('Apify rows skipped', ['run_id' => $runId, 'skipped' => $skipped]);
+        }
+
+        return ['posts' => array_values($posts), 'excluded_own' => $own, 'duplicates' => $duplicates, 'received' => count($entries), 'plan_notices' => $notices, 'empty_notices' => $emptyNotices, 'skipped_invalid' => $skipped];
     }
 
     private function client(): PendingRequest

@@ -46,6 +46,7 @@ return [
         'probe_daily_runs' => (int) env('APIFY_PROBE_DAILY_RUNS', 1),
         'probe_max_charge_usd' => (float) env('APIFY_PROBE_MAX_CHARGE_USD', 0.05),
         'monthly_budget_usd' => (float) env('APIFY_MONTHLY_BUDGET_USD', 4.50),
+        'max_post_age_days' => (int) env('APIFY_MAX_POST_AGE_DAYS', 14),
         'excluded_usernames' => array_values(array_filter(array_map('trim', explode(',', env('THREADS_EXCLUDED_USERNAMES', 'risencode.dev,risendev'))))),
     ],
 

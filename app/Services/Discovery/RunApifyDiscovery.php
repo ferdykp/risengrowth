@@ -156,6 +156,7 @@ class RunApifyDiscovery
                     throw new ApifyDiscoveryException('DAILY_LIMIT', 'Batas start harian UTC tercapai. Actor tidak dimulai.');
                 }
                 DB::table('discovery_runs')->where('id', $runId)->update(['provider_attempted_at' => now(), 'updated_at' => now()]);
+                DB::table('search_keywords')->where('id', $run->search_keyword_id)->update(['last_ran_at' => now(), 'updated_at' => now()]);
                 $remote = $this->provider->start($run->keyword_snapshot, $settings->daily_runs);
                 DB::table('discovery_runs')->where('id', $runId)->update(['provider_run_id' => $remote['id'],
                     'provider_dataset_id' => $remote['dataset_id'], 'provider_usage_usd' => $remote['reported_usage_usd'], 'updated_at' => now()]);
@@ -191,7 +192,7 @@ class RunApifyDiscovery
         }
     }
 
-    /** @param array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int, empty_notices: int} $result */
+    /** @param array{posts: array<int, array<string, mixed>>, excluded_own: int, duplicates: int, received: int, plan_notices: int, empty_notices: int, skipped_invalid: int} $result */
     private function persist(object $run, array $result): void
     {
         DB::transaction(function () use ($run, $result): void {

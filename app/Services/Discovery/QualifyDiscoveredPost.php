@@ -27,7 +27,14 @@ class QualifyDiscoveredPost
 
         $pattern = implode('\s+', array_map(fn (string $part): string => preg_quote($part, '/'), $parts));
 
-        return preg_match('/(?<![\p{L}\p{N}_])'.$pattern.'(?![\p{L}\p{N}_])/iu', $body) === 1;
+        return preg_match('/(?<![\p{L}\p{N}_])'.$pattern.'(?:nya|ku|mu)?(?![\p{L}\p{N}_])/iu', $body) === 1;
+    }
+
+    private function mentionsKeyword(string $body, string $keyword): bool
+    {
+        $words = preg_split('/\s+/u', trim($keyword), -1, PREG_SPLIT_NO_EMPTY);
+
+        return $words && count($this->evidence($body, $words)) === count($words);
     }
 
     /** @return array{status: string, intent: string, service_category: ?string, score: int, rationale: string, evidence: array<string, array<int, string>>, category: string, intent_classification: string, confidence: string, rule_version: string, review_status: string} */
@@ -59,7 +66,7 @@ class QualifyDiscoveredPost
             $negative[] = 'explicit negation of buying intent';
         }
         $community = $this->evidence($body, ['developer', 'freelancer', 'founder', 'agency', 'saas', 'build in public', 'open source', 'framework', 'belajar', 'tutorial']);
-        $relevant = $this->matches($body, $keyword);
+        $relevant = $this->mentionsKeyword($body, $keyword);
         $score = ($relevant ? 20 : 0) + ($services ? 25 : 0) + ($buyer ? 55 : 0);
         $score = max(0, $score - ($negative ? 60 : 0));
         $status = ! $relevant || ($negative && ! $buyer) ? 'rejected'
