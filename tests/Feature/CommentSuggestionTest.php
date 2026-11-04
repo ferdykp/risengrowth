@@ -243,7 +243,7 @@ class CommentSuggestionTest extends TestCase
         $this->actingAs($owner)->post(route('comments.suggestions.store'), $this->payload() + ['purpose' => 'dm'])
             ->assertRedirect('/comments#quick-comments');
         $this->assertDatabaseHas('comment_suggestions', ['user_id' => $owner->id, 'purpose' => 'dm', 'body' => $body]);
-        $this->get(route('comments.index'))->assertOk()->assertSee('Salin DM')->assertSee('href="https://www.threads.com/@pemiliktoko"', false);
+        $this->get(route('comments.index'))->assertOk()->assertSee('Salin pesan pribadi')->assertSee('href="https://www.threads.com/@pemiliktoko"', false);
         Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'private introductory DM')
             && str_contains($request['messages'][0]['content'], 'No URLs or account mentions'));
         Http::assertSentCount(1);

@@ -28,7 +28,7 @@ class UserManagementTest extends TestCase
     {
         $this->get('/admin/users')->assertRedirect('/login');
         $this->actingAs(User::factory()->create())->get('/admin/users')->assertForbidden();
-        $this->actingAs($this->admin())->get('/admin/users')->assertOk()->assertSee('User Management');
+        $this->actingAs($this->admin())->get('/admin/users')->assertOk()->assertSee('Kelola pengguna');
     }
 
     public function test_admin_can_create_account_and_force_password_change(): void

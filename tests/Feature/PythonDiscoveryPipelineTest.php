@@ -134,7 +134,7 @@ class PythonDiscoveryPipelineTest extends TestCase
         app(RunPythonDiscovery::class)->execute($keyword);
 
         $this->assertDatabaseHas('leads', ['discovered_post_id' => $post->id, 'status' => 'dismissed', 'manually_overridden' => true]);
-        $this->get(route('discovery.index', ['qualification' => 'rejected']))
+        $this->get(route('discovery.posts.index', ['qualification' => 'rejected']))
             ->assertOk()->assertSee('Already handled by our team');
         Process::assertRanTimes(fn ($process) => is_array($process->command) && $process->command[1] === base_path('scraper/main.py'), 2);
     }

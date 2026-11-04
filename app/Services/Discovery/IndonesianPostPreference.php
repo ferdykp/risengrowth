@@ -13,6 +13,13 @@ class IndonesianPostPreference
     {
         $clauses = array_fill(0, count(self::MARKERS), 'LOWER(body) LIKE ?');
         $patterns = array_map(fn (string $word): string => '%'.$word.'%', self::MARKERS);
+
+        if ($query->getModel() instanceof DiscoveredPost) {
+            $query->orderByRaw('CASE WHEN ('.implode(' OR ', $clauses).') THEN 1 ELSE 0 END DESC', $patterns);
+
+            return;
+        }
+
         $rank = DiscoveredPost::query()->selectRaw('CASE WHEN ('.implode(' OR ', $clauses).') THEN 1 ELSE 0 END', $patterns)
             ->whereColumn('discovered_posts.id', $postForeignKey)->limit(1);
         $query->orderByDesc($rank);

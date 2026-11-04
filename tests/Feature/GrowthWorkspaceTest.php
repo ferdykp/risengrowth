@@ -48,10 +48,10 @@ class GrowthWorkspaceTest extends TestCase
     public function test_new_modules_render_empty_states_and_navigation(): void
     {
         $this->actingAs(User::factory()->create());
-        $this->get('/')->assertOk()->assertSee('Today’s actions')->assertSee('Tidak ada follow-up jatuh tempo.');
+        $this->get('/')->assertOk()->assertSee('Langkah berikutnya')->assertSee('Tidak ada tindak lanjut yang jatuh tempo.');
         $this->get(route('relationships.index'))->assertOk()->assertSee('Belum ada relasi yang cocok.');
         $this->get(route('studio.index'))->assertOk()->assertSee('Belum ada konten yang cocok.');
-        $this->get(route('discovery.index'))->assertOk()->assertSee('Capture postingan manual');
+        $this->get(route('discovery.index'))->assertOk()->assertSee('Tambahkan postingan secara manual');
     }
 
     public function test_private_drafts_do_not_leak_from_any_workspace_view(): void
@@ -251,8 +251,8 @@ class GrowthWorkspaceTest extends TestCase
         $owner = User::factory()->create();
         $lead = $this->lead();
         $this->actingAs($owner)->patch(route('discovery.posts.review', $lead->post), ['qualification' => 'qualified', 'category' => 'community', 'reason' => 'Cocok untuk networking.'])->assertRedirect();
-        $this->get(route('discovery.index', ['category' => 'community']))->assertOk()->assertSee('Butuh website untuk usaha kecil.');
-        $this->get(route('discovery.index', ['category' => 'business']))->assertOk()->assertDontSee('Butuh website untuk usaha kecil.');
+        $this->get(route('discovery.posts.index', ['category' => 'community']))->assertOk()->assertSee('Butuh website untuk usaha kecil.');
+        $this->get(route('discovery.posts.index', ['category' => 'business']))->assertOk()->assertDontSee('Butuh website untuk usaha kecil.');
     }
 
     public function test_reviewed_networking_can_be_saved_without_claiming_an_interaction(): void

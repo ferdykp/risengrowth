@@ -19,10 +19,11 @@ class DiscoveryReviewTest extends TestCase
         $post = DiscoveredPost::create(['platform' => 'web', 'external_post_id' => 'review', 'body' => 'Website project details']);
         AiAnalysis::create(['discovered_post_id' => $post->id, 'provider' => 'rules', 'model' => 'rules-v1', 'prompt_version' => 'rules-v1', 'status' => 'completed', 'output' => ['status' => 'uncertain', 'rationale' => 'Review needed']]);
 
-        $this->actingAs($user)->get(route('discovery.index', ['qualification' => 'uncertain']))
+        $postsUrl = route('discovery.posts.index', ['qualification' => 'uncertain']);
+        $this->actingAs($user)->get($postsUrl)
             ->assertOk()->assertSee('Website project details')
             ->assertSee('action="'.route('discovery.posts.review', $post, false).'"', false);
-        $this->patch(route('discovery.posts.review', $post), ['qualification' => 'qualified', 'reason' => 'Confirmed buyer request'])
+        $this->from($postsUrl)->patch(route('discovery.posts.review', $post), ['qualification' => 'qualified', 'reason' => 'Confirmed buyer request'])
             ->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertDatabaseCount('ai_analyses', 2);

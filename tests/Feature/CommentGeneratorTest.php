@@ -51,7 +51,7 @@ class CommentGeneratorTest extends TestCase
         ]);
         $this->assertSame(2, CommentDraft::count());
         $this->assertSame(2, CommentDraft::max('revision'));
-        $this->get(route('comments.index', ['lead' => $lead->id]))->assertOk()->assertSee('Generator Komentar');
+        $this->get(route('comments.index', ['lead' => $lead->id]))->assertOk()->assertSee('Buat balasan');
     }
 
     public function test_invalid_drafts_are_rejected(): void
@@ -117,7 +117,7 @@ class CommentGeneratorTest extends TestCase
         $post = DiscoveredPost::create(['platform' => 'threads', 'external_post_id' => 'scraped-dm-test', 'username' => 'tokobaru',
             'body' => 'Cari website toko dengan katalog produk dan WhatsApp.', 'permalink' => 'https://www.threads.com/@tokobaru/post/Abc123']);
         $this->actingAs(User::factory()->create())->get(route('comments.index', ['post' => $post->id]))
-            ->assertOk()->assertSee($post->body)->assertSee($post->permalink)->assertSee('Draft DM pribadi');
+            ->assertOk()->assertSee($post->body)->assertSee($post->permalink)->assertSee('Pesan pribadi');
         $this->assertDatabaseCount('leads', 0);
         $this->get(route('comments.index', ['post' => 999999]))->assertNotFound();
     }

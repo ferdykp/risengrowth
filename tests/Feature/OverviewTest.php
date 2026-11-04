@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,6 +18,6 @@ class OverviewTest extends TestCase
 
     public function test_overview_shows_real_empty_state(): void
     {
-        $this->get('/')->assertOk()->assertSee('Belum ada prospek')->assertSee('Belum ada aktivitas tercatat.');
+        $this->get('/')->assertOk()->assertSee('Belum ada peluang')->assertSee('Belum ada aktivitas tercatat.');
     }
 }

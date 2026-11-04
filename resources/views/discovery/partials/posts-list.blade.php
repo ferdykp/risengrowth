@@ -24,8 +24,8 @@
         @if($post->permalink && parse_url($post->permalink, PHP_URL_SCHEME) === 'https')<a href="{{ $post->permalink }}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">Buka postingan asli ↗</a>@endif
         <a href="{{ route('comments.index', ['post' => $post->id]) }}#quick-comments" class="text-sm font-semibold text-blue-700 underline">Buat balasan / pesan</a>
         @if($localAi)<p class="text-xs text-slate-600">Saran AI (perlu ditinjau): {{ data_get($localAi, 'reason') }} {{ data_get($localAi, 'follow_up') }}</p>@endif
-        @if(config('services.ollama.enabled'))<form method="POST" action="{{ route('discovery.posts.local', $post) }}">@csrf<button class="text-sm text-blue-700 underline">Minta saran AI lokal</button></form>@endif
-        <form method="POST" action="{{ route('discovery.posts.review', $post) }}" class="rg-review-form">
+        @if(config('services.ollama.enabled'))<form method="POST" action="{{ route('discovery.posts.local', $post, false) }}">@csrf<button class="text-sm text-blue-700 underline">Minta saran AI lokal</button></form>@endif
+        <form method="POST" action="{{ route('discovery.posts.review', $post, false) }}" class="rg-review-form">
             @csrf @method('PATCH')
             <select name="qualification" aria-label="Hasil penilaian" class="rounded-lg border border-slate-200 p-2 text-sm"><option value="qualified">Layak ditinjau</option><option value="uncertain">Perlu ditinjau</option><option value="rejected">Tidak lolos</option></select>
             <select name="category" aria-label="Kelompok peluang" class="rounded-lg border p-2 text-sm"><option value="business">Peluang bisnis</option><option value="community">Komunitas</option><option value="not_relevant">Tidak relevan</option></select>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiAnalysis;
 use App\Models\DiscoveredPost;
+use App\Services\Discovery\IndonesianPostPreference;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,7 @@ class DiscoveredPostController extends Controller
         $filters = $request->validate([
             'category' => ['nullable', Rule::in(['business', 'community', 'not_relevant'])],
             'qualification' => ['nullable', Rule::in(['qualified', 'uncertain', 'rejected'])],
+            'prefer_indonesian' => ['sometimes', 'boolean'],
         ]);
 
         $latestAnalysisIds = AiAnalysis::query()->selectRaw('MAX(id)')->groupBy('discovered_post_id');
@@ -29,6 +31,11 @@ class DiscoveredPostController extends Controller
         if (filled($filters['qualification'] ?? null)) {
             $posts->whereHas('analyses', fn ($query) => $query->whereIn('id', $latestAnalysisIds)
                 ->where('output->status', $filters['qualification']));
+        }
+
+        $filters['prefer_indonesian'] = (bool) ($filters['prefer_indonesian'] ?? true);
+        if ($filters['prefer_indonesian']) {
+            app(IndonesianPostPreference::class)->prioritize($posts, 'discovered_posts.id');
         }
 
         return view('discovery.posts', [

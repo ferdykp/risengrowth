@@ -24,9 +24,9 @@ class DiscoveryTest extends TestCase
         $this->actingAs($member)
             ->get(route('discovery.index'))
             ->assertOk()
-            ->assertSee('Eksplorasi Prospek')
+            ->assertSee('Pencarian postingan')
             ->assertSee('Belum ada riwayat pencarian')
-            ->assertSee('Pencarian dikelola Administrator')
+            ->assertSee('Pencarian dikelola admin')
             ->assertDontSee('Jalankan Pencarian');
     }
 
@@ -37,8 +37,8 @@ class DiscoveryTest extends TestCase
         $this->actingAs($admin)
             ->get(route('discovery.index'))
             ->assertOk()
-            ->assertSee('Eksplorasi Prospek')
-            ->assertSee('Jalankan Pencarian')
+            ->assertSee('Pencarian postingan')
+            ->assertSee('Mulai pencarian')
             ->assertSee(
                 'action="'.route('discovery.run').'"',
                 false
@@ -81,7 +81,7 @@ class DiscoveryTest extends TestCase
             ->assertOk()
             ->assertSee('value="apify" selected', false)
             ->assertSee('Akun Threads belum tersedia')
-            ->assertSee('threads_keyword_search')
+            ->assertSee('Pencarian Threads bergantung pada izin yang diberikan platform.')
             ->assertSee(route('settings.index'));
     }
 }

@@ -20,9 +20,9 @@ class WorkspaceLayoutTest extends TestCase
                 ->assertOk()
                 ->assertSee('id="rg-sidebar"', false)
                 ->assertSee('id="rg-menu-toggle"', false)
-                ->assertSee('href="' . route('reviews.index') . '"', false)
-                ->assertSee('href="' . route('settings.index') . '"', false)
-                ->assertSee('action="' . route('logout') . '"', false)
+                ->assertSee('href="'.route('reviews.index').'"', false)
+                ->assertSee('href="'.route('settings.index').'"', false)
+                ->assertSee('action="'.route('logout').'"', false)
                 ->assertSee('method="POST"', false)
                 ->assertDontSee('>7</span>', false);
         }
@@ -33,11 +33,11 @@ class WorkspaceLayoutTest extends TestCase
         $member = User::factory()->create();
         $this->actingAs($member)->get('/')
             ->assertOk()
-            ->assertDontSee('User Management');
+            ->assertDontSee('Kelola pengguna');
 
         $admin = User::factory()->create(['role' => 'admin']);
         $this->actingAs($admin)->get('/')
             ->assertOk()
-            ->assertSee('User Management');
+            ->assertSee('Kelola pengguna');
     }
 }

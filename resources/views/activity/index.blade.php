@@ -8,13 +8,13 @@
                 <p>Lihat keputusan peninjauan, status balasan, dan perubahan yang tercatat di akunmu.</p>
             </div></header>
             <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
-                @foreach([['label'=>'Keputusan review','value'=>$approvalCount],['label'=>'Percobaan engagement','value'=>$attemptCount],['label'=>'Terbit terkonfirmasi','value'=>$publishedCount],['label'=>'Gagal / belum pasti','value'=>$failedCount]] as $metric)
+                @foreach([['label'=>'Keputusan tinjauan','value'=>$approvalCount],['label'=>'Percobaan balasan','value'=>$attemptCount],['label'=>'Terbit terkonfirmasi','value'=>$publishedCount],['label'=>'Gagal / belum pasti','value'=>$failedCount]] as $metric)
                     <article class="rg-panel rounded-2xl bg-white border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">{{ $metric['label'] }}</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ number_format($metric['value'], 0, ',', '.') }}</p></article>
                 @endforeach
             </div>
             <div class="flex flex-col sm:flex-row gap-3 justify-between">
                 <nav aria-label="Kategori aktivitas" class="flex flex-wrap gap-2">
-                    @foreach(['all'=>'Semua aktivitas','approvals'=>'Keputusan review','engagements'=>'Status balasan','events'=>'Riwayat sistem'] as $key=>$label)
+                    @foreach(['all'=>'Semua aktivitas','approvals'=>'Keputusan tinjauan','engagements'=>'Status balasan','events'=>'Riwayat sistem'] as $key=>$label)
                         <a href="{{ route('activity.index', ['tab'=>$key]) }}" class="text-xs font-semibold rounded-lg px-3.5 py-2.5 border {{ $tab===$key?'bg-black text-white border-black':'bg-white text-slate-700 border-slate-200 hover:border-slate-400' }}">{{ $label }}</a>
                     @endforeach
                 </nav>
@@ -44,7 +44,7 @@
                                 </div>
                                 <div class="sm:text-right shrink-0"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {{ $approval->decision === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">{{ $approval->decision === 'approved' ? 'Disetujui' : 'Ditolak' }}</span><p class="text-xs text-slate-500 mt-2">{{ $approval->decided_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</p></div>
                             </article>
-                        @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada keputusan review.</p> @endforelse
+                        @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada keputusan tinjauan.</p> @endforelse
                     </div>
                     @if($approvals->hasPages())<div class="p-5 border-t border-slate-100">{{ $approvals->links() }}</div>@endif
                 </section>

@@ -21,6 +21,7 @@ class ReviewQueueTest extends TestCase
         ]);
         $lead = Lead::query()->create(['discovered_post_id' => $post->id]);
         $body = 'Boleh cerita sedikit kebutuhan website usahanya?';
+
         return CommentDraft::query()->create([
             'lead_id' => $lead->id, 'author_id' => $user->id,
             'variant_key' => 'friendly', 'revision' => 1, 'body' => $body,
@@ -37,7 +38,7 @@ class ReviewQueueTest extends TestCase
     {
         $user = User::factory()->create();
         $draft = $this->draftFor($user);
-        $this->actingAs($user)->get(route('reviews.index'))->assertOk()->assertSee('Antrean Review');
+        $this->actingAs($user)->get(route('reviews.index'))->assertOk()->assertSee('Draf balasan');
         $this->actingAs($user)->post(route('reviews.submit', $draft))->assertRedirect();
         $this->assertDatabaseHas('comment_drafts', ['id' => $draft->id, 'status' => 'pending_review']);
         $this->actingAs($user)->post(route('reviews.decide', $draft), ['decision' => 'approved'])->assertRedirect();

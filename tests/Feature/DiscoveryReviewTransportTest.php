@@ -22,16 +22,17 @@ class DiscoveryReviewTransportTest extends TestCase
         $action = route('discovery.posts.review', $post, false);
         $localAction = route('discovery.posts.local', $post, false);
 
-        $this->actingAs($user)->get('http://localhost/discovery')->assertOk()
+        $postsUrl = 'http://localhost/discovery/posts';
+        $this->actingAs($user)->get($postsUrl)->assertOk()
             ->assertSee('action="'.$action.'"', false)->assertSee('action="'.$localAction.'"', false)
             ->assertDontSee('action="http://localhost'.$action.'"', false);
         $response = $this->getJson('http://localhost/discovery')->assertOk();
         $this->assertStringContainsString('action="'.$action.'"', $response->json('reviews_html'));
         $this->assertStringNotContainsString('action="http://', $response->json('reviews_html'));
 
-        $this->from('https://localhost/discovery')->patch('https://localhost'.$action, [
+        $this->from('https://localhost/discovery/posts')->patch('https://localhost'.$action, [
             'qualification' => 'qualified', 'reason' => 'Buyer request verified',
-        ])->assertRedirect('https://localhost/discovery')->assertSessionHas('success');
+        ])->assertRedirect('https://localhost/discovery/posts')->assertSessionHas('success');
         $this->assertDatabaseHas('leads', ['discovered_post_id' => $post->id, 'status' => 'qualified', 'manually_overridden' => true]);
     }
 }

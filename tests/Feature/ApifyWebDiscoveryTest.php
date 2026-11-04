@@ -114,7 +114,7 @@ class ApifyWebDiscoveryTest extends TestCase
         $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'completed', 'fetched_count' => 4,
             'relevant_count' => 1, 'added_count' => 1, 'excluded_own_count' => 1, 'uncertain_count' => 1, 'rejected_count' => 1]);
         $this->actingAs($admin)->get(route('leads.index', ['source' => 'apify']))->assertOk()->assertSee('Need a website for my business')->assertDontSee('My portfolio');
-        $this->get(route('discovery.index'))->assertOk()->assertSee('Website project details');
+        $this->get(route('discovery.posts.index'))->assertOk()->assertSee('Website project details');
         $this->getJson(route('discovery.index'))->assertOk()->assertJsonStructure(['reviews_html'])->assertSee('Website project details');
         Http::assertSentCount(5);
         Queue::assertPushed(RunApifyDiscoveryJob::class, 1);

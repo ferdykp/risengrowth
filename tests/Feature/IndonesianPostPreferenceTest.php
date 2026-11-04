@@ -27,8 +27,8 @@ class IndonesianPostPreferenceTest extends TestCase
 
         $this->actingAs($user)->get(route('leads.index'))->assertOk()->assertSeeInOrder([$indonesian, $english]);
         $this->get(route('leads.index', ['prefer_indonesian' => 0]))->assertOk()->assertSeeInOrder([$english, $indonesian]);
-        $this->get(route('discovery.index'))->assertOk()->assertSee('bukan lokasi akun')->assertSeeInOrder([$indonesian, $english]);
-        $this->get(route('discovery.index', ['prefer_indonesian' => 0]))->assertOk()->assertSeeInOrder([$english, $indonesian]);
+        $this->get(route('discovery.posts.index'))->assertOk()->assertSee('Utamakan postingan berbahasa Indonesia')->assertSeeInOrder([$indonesian, $english]);
+        $this->get(route('discovery.posts.index', ['prefer_indonesian' => 0]))->assertOk()->assertSeeInOrder([$english, $indonesian]);
         $json = $this->getJson(route('discovery.index'))->assertOk();
         $this->assertLessThan(strpos($json->json('reviews_html'), $english), strpos($json->json('reviews_html'), $indonesian));
         $this->assertDatabaseCount('discovered_posts', 2);

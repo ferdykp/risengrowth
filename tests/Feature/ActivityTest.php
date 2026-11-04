@@ -24,9 +24,9 @@ class ActivityTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->get(route('activity.index'))
-            ->assertOk()->assertSee('Aktivitas & Engagement', false)
-            ->assertSee('Belum ada keputusan review.')
-            ->assertSee('Belum ada percobaan engagement tercatat.');
+            ->assertOk()->assertSee('Aktivitas terbaru', false)
+            ->assertSee('Belum ada keputusan tinjauan.')
+            ->assertSee('Belum ada percobaan balasan tercatat.');
         $this->actingAs($user)->get(route('activity.index', ['tab' => 'unknown-tab']))->assertSessionHasErrors('tab');
     }
 
@@ -34,15 +34,15 @@ class ActivityTest extends TestCase
     {
         $owner = User::factory()->create();
         $other = User::factory()->create();
-        $post = DiscoveredPost::create(['platform'=>'threads', 'external_post_id'=>'activity-01', 'username'=>'owner_test', 'body'=>'Perlu website.']);
-        $lead = Lead::create(['discovered_post_id'=>$post->id]);
-        $draft = CommentDraft::create(['lead_id'=>$lead->id, 'author_id'=>$owner->id, 'variant_key'=>'friendly', 'revision'=>1, 'body'=>'Boleh cerita kebutuhan website?', 'content_sha256'=>hash('sha256', 'Boleh cerita kebutuhan website?'), 'status'=>'approved']);
-        CommentApproval::create(['comment_draft_id'=>$draft->id, 'reviewer_id'=>$owner->id, 'decision'=>'approved', 'approved_sha256'=>$draft->content_sha256, 'approved_target_post_id'=>$post->external_post_id, 'approved_platform'=>'threads', 'approved_body_snapshot'=>$draft->body, 'decided_at'=>now()]);
-        ActivityLog::create(['actor_id'=>$owner->id, 'lead_id'=>$lead->id, 'event'=>'comment_reviewed']);
+        $post = DiscoveredPost::create(['platform' => 'threads', 'external_post_id' => 'activity-01', 'username' => 'owner_test', 'body' => 'Perlu website.']);
+        $lead = Lead::create(['discovered_post_id' => $post->id]);
+        $draft = CommentDraft::create(['lead_id' => $lead->id, 'author_id' => $owner->id, 'variant_key' => 'friendly', 'revision' => 1, 'body' => 'Boleh cerita kebutuhan website?', 'content_sha256' => hash('sha256', 'Boleh cerita kebutuhan website?'), 'status' => 'approved']);
+        CommentApproval::create(['comment_draft_id' => $draft->id, 'reviewer_id' => $owner->id, 'decision' => 'approved', 'approved_sha256' => $draft->content_sha256, 'approved_target_post_id' => $post->external_post_id, 'approved_platform' => 'threads', 'approved_body_snapshot' => $draft->body, 'decided_at' => now()]);
+        ActivityLog::create(['actor_id' => $owner->id, 'lead_id' => $lead->id, 'event' => 'comment_reviewed']);
 
-        $this->actingAs($owner)->get(route('activity.index', ['tab'=>'approvals']))->assertOk()->assertSee('owner_test');
-        $this->actingAs($other)->get(route('activity.index', ['tab'=>'approvals']))->assertOk()->assertDontSee('owner_test');
-        $this->actingAs($other)->get(route('activity.index', ['tab'=>'events']))->assertDontSee('comment reviewed');
+        $this->actingAs($owner)->get(route('activity.index', ['tab' => 'approvals']))->assertOk()->assertSee('owner_test');
+        $this->actingAs($other)->get(route('activity.index', ['tab' => 'approvals']))->assertOk()->assertDontSee('owner_test');
+        $this->actingAs($other)->get(route('activity.index', ['tab' => 'events']))->assertDontSee('comment reviewed');
         $this->assertDatabaseCount('engagement_attempts', 0);
     }
 }
