@@ -22,11 +22,11 @@
                                     </p>
 
                                     @if(data_get($run, 'status') === 'completed' && (int) data_get($run, 'fetched_count') === 0)
-                                        <p class="mt-1 max-w-sm text-xs leading-relaxed text-amber-800">{{ in_array(data_get($run, 'source_type'), ['threads', 'apify']) ? (data_get($run, 'source_type') === 'apify' ? 'Dataset Apify tidak berisi postingan untuk keyword ini. Tidak ada lead yang dibuat.' : 'Threads API mengembalikan 0 postingan. Periksa keyword dan persetujuan akses threads_keyword_search di Meta. Akun terhubung belum membuktikan akses pencarian publik.') : 'Tidak ada kecocokan pada sumber public web / API yang dipindai. Pencarian ini tidak mencakup Threads.' }}</p>
+                                        <p class="mt-1 max-w-sm text-xs leading-relaxed text-amber-800">{{ in_array(data_get($run, 'source_type'), ['threads', 'apify']) ? (data_get($run, 'source_type') === 'apify' ? 'Tidak ada postingan pada hasil pencarian ini, jadi belum ada peluang yang dibuat.' : 'Pencarian Threads belum menemukan postingan. Pastikan kata kunci sesuai dan akun memiliki izin pencarian publik.') : 'Tidak ada kecocokan pada situs yang dicari. Pencarian ini tidak mencakup Threads.' }}</p>
                                     @endif
                                     @if(data_get($run, 'source_type') === 'apify')
-                                        <p class="mt-1 text-xs text-slate-500">Qualified {{ $run->relevant_count }} · Review {{ $run->uncertain_count }} · Ditolak {{ $run->rejected_count }} · Akun sendiri {{ $run->excluded_own_count }}</p>
-                                        @if($run->provider_run_id)<p class="mt-1 text-xs text-slate-500 break-words">Run: {{ $run->provider_run_id }} · Usage dilaporkan: {{ $run->provider_usage_usd === null ? 'belum tersedia' : 'USD '.$run->provider_usage_usd }}</p>@endif
+                                        <p class="mt-1 text-xs text-slate-500">Layak {{ $run->relevant_count }} · Perlu ditinjau {{ $run->uncertain_count }} · Tidak lolos {{ $run->rejected_count }} · Akun sendiri {{ $run->excluded_own_count }}</p>
+                                        @if($run->provider_run_id)<p class="mt-1 text-xs text-slate-500 break-words">ID pencarian: {{ $run->provider_run_id }} · Penggunaan dilaporkan: {{ $run->provider_usage_usd === null ? 'belum tersedia' : 'USD '.$run->provider_usage_usd }}</p>@endif
                                     @endif
                                     @if (filled(data_get($run, 'error_summary')))
                                         <p class="mt-1 max-w-xs break-words text-xs leading-relaxed text-red-700">
@@ -38,7 +38,7 @@
 
 
                                 <td class="py-4 pr-4 text-slate-600">
-                                    {{ ['apify' => 'Threads / Apify', 'python' => 'Public web / API', 'threads' => 'Threads API'][$run->source_type] ?? $run->source_type }}
+                                    {{ ['apify' => 'Threads (Apify)', 'python' => 'Situs web terpilih', 'threads' => 'Threads (akses resmi)'][$run->source_type] ?? $run->source_type }}
                                 </td>
 
 
@@ -89,7 +89,7 @@
                                     </p>
 
                                     <p class="mt-1 text-sm text-slate-500">
-                                        Pilih keyword lalu jalankan pencarian pertama.
+                                        Pilih kata kunci, lalu mulai pencarian pertamamu.
                                     </p>
 
                                 </td>

@@ -2,17 +2,17 @@
 @section('title', 'Detail Prospek')
 @section('page_heading', 'Detail Prospek')
 @section('content')
-<div class="flex flex-wrap gap-4 justify-between items-start">
+<header class="rg-page-intro">
                 <div>
-                    <p class="text-xs uppercase font-bold tracking-[.17em] text-slate-500">LEAD WORKSPACE / DETAILS</p>
-                    <h1 class="mt-2 text-3xl md:text-[36px] font-bold tracking-[-.04em]">Detail Prospek</h1>
-                    <p class="mt-2 text-sm text-slate-500">Tinjau postingan, potensi kebutuhan, dan riwayat interaksi dalam satu tempat.</p>
+                    <p class="rg-page-eyebrow">PROFIL PELUANG</p>
+                    <h1>Detail prospek</h1>
+                    <p class="mt-2 text-sm text-slate-500">Tinjau postingan, kebutuhan yang mungkin, dan riwayat percakapan di satu tempat.</p>
                 </div>
                 <div class="flex flex-wrap gap-2 items-center">
                     <span class="px-3 py-2 rounded-full border text-xs font-semibold border-slate-200 bg-white capitalize">{{ $lead->post->platform }}</span>
                     <span class="px-3 py-2 rounded-full text-xs font-semibold {{ $lead->priority === 'high' ? 'bg-red-50 text-red-700' : ($lead->priority === 'medium' ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-600') }}">{{ ['high'=>'Prioritas tinggi','medium'=>'Prioritas sedang','low'=>'Prioritas rendah','unscored'=>'Belum dinilai'][$lead->priority] ?? $lead->priority }}</span>
                 </div>
-            </div>
+            </header>
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
                 <div class="xl:col-span-8 space-y-5 min-w-0">
                     <section class="rg-panel bg-white rounded-2xl border border-slate-200 p-5 md:p-7">
@@ -25,7 +25,7 @@
                         <div class="border-t border-slate-100 mt-7 pt-4 text-xs text-slate-500">Ditemukan: {{ $lead->post->first_discovered_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') ?? $lead->post->created_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</div>
                     </section>
                     <section class="rg-panel bg-white rounded-2xl border border-slate-200 p-5 md:p-7 space-y-5">
-                        <div><h2 class="text-lg font-bold">Kualifikasi prospek</h2><p class="text-xs text-slate-500 mt-1">Hasil analisis yang telah tersimpan untuk postingan ini.</p></div>
+                        <div><h2 class="text-lg font-bold">Penilaian peluang</h2><p class="text-xs text-slate-500 mt-1">Ringkasan analisis yang tersimpan untuk postingan ini.</p></div>
                         @if($lead->score === null && $lead->post->analyses->isEmpty())
                             <div class="py-9 text-center border border-dashed border-slate-200 rounded-xl"><span class="material-symbols-outlined text-4xl text-slate-300">psychology</span><h3 class="font-semibold mt-2">Belum dianalisis</h3><p class="text-sm text-slate-500 mt-2 max-w-md mx-auto">Analisis AI baru akan tersedia setelah integrasi provider dan proses scoring diaktifkan.</p></div>
                         @else
@@ -61,5 +61,5 @@
                     <section class="rg-panel bg-white rounded-2xl border border-slate-200 p-5"><h2 class="font-bold">Aktivitas</h2>@forelse($activities as $activity)<div class="border-b border-slate-100 last:border-0 py-3"><div class="text-sm text-slate-700">{{ str_replace('_', ' ', $activity->event) }}</div><p class="text-sm text-slate-600 whitespace-pre-wrap">{{ (is_array($activity->metadata) ? $activity->metadata : json_decode($activity->metadata ?? '{}', true))['interaction'] ?? '' }}</p><time class="text-xs text-slate-500">{{ $activity->created_at?->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}</time></div>@empty<div class="text-center py-8"><span class="material-symbols-outlined text-3xl text-slate-300">history</span><p class="font-semibold text-sm mt-2">Belum ada aktivitas</p><p class="text-xs text-slate-500 mt-2">Riwayat engagement prospek akan muncul di sini.</p></div>@endforelse</section>
                 </div>
             </div>
-        <div class="rg-panel mt-6 p-5 bg-white border border-slate-200 rounded-2xl"><div class="font-semibold text-sm">Siapkan komentar untuk prospek ini</div><p class="text-sm text-slate-500 mt-1">Tulis draft dan review sebelum publikasi.</p>@auth<a class="inline-block mt-3 px-4 py-2 rounded-xl bg-black text-white text-sm font-semibold" href="{{ route('comments.index', ['lead' => $lead->id]) }}">Buka Generator Komentar</a>@else<a class="inline-block mt-3 px-4 py-2 rounded-xl bg-black text-white text-sm font-semibold" href="{{ route('login') }}">Masuk untuk membuat draft</a>@endauth</div>
+        <div class="rg-panel mt-6 p-5 bg-white border border-slate-200 rounded-2xl"><div class="font-semibold text-sm">Siapkan balasan untuk prospek ini</div><p class="text-sm text-slate-500 mt-1">Tulis draf, tinjau, lalu kirim sendiri.</p>@auth<a class="inline-block mt-3 px-4 py-2 rounded-xl bg-black text-white text-sm font-semibold" href="{{ route('comments.index', ['lead' => $lead->id]) }}">Buat balasan</a>@else<a class="inline-block mt-3 px-4 py-2 rounded-xl bg-black text-white text-sm font-semibold" href="{{ route('login') }}">Masuk untuk membuat draf</a>@endauth</div>
 @endsection

@@ -1,17 +1,10 @@
 @extends('layouts.workspace')
 
-@section('title', 'Eksplorasi')
-@section('page_heading', 'Eksplorasi')
+@section('title', 'Pencarian postingan')
+@section('page_heading', 'Pencarian postingan')
 
 @section('content')
-<div class="flex flex-wrap gap-3"><a class="rg-action bg-white" href="{{ route('keywords.index') }}">Kelola keyword</a><a class="rg-action bg-white" href="{{ route('leads.index') }}">Results inbox</a></div>
-<details class="rg-panel bg-white border rounded-2xl"><summary class="cursor-pointer font-semibold">Capture postingan manual</summary><p class="text-sm text-slate-500 mt-3">Tempel teks dan URL sebagai referensi. Tidak mengambil halaman atau memerlukan koneksi Threads.</p><form method="POST" action="{{ route('discovery.capture') }}" class="grid gap-4 mt-4 sm:grid-cols-2">@csrf
-<label class="text-sm">Platform<select name="platform" class="block w-full border rounded-lg p-2"><option value="threads">Threads</option><option value="web">Web</option><option value="instagram">Instagram</option></select></label>
-<label class="text-sm">Penulis<input name="username" maxlength="191" class="block w-full border rounded-lg p-2" value="{{ old('username') }}"></label>
-<label class="text-sm sm:col-span-2">URL asli<input name="url" type="url" required maxlength="2048" class="block w-full border rounded-lg p-2" value="{{ old('url') }}"></label>
-<label class="text-sm sm:col-span-2">Teks postingan<textarea name="body" required minlength="10" maxlength="20000" class="block w-full border rounded-lg p-2">{{ old('body') }}</textarea></label>
-<label class="text-sm">Keyword konteks<input name="keyword" required maxlength="191" class="block w-full border rounded-lg p-2" value="{{ old('keyword') }}"></label><div class="flex items-end"><button class="bg-slate-950 text-white rounded-xl px-4 py-2">Simpan untuk review</button></div>
-</form></details>
+
 
 
     @php
@@ -118,9 +111,9 @@
                 'icon' => 'forum',
             ],
             [
-                'label' => 'Keyword aktif',
+                'label' => 'Kata kunci aktif',
                 'value' => $activeKeywords, 'key' => 'activeKeywords',
-                'note' => 'Keyword dipantau',
+                'note' => 'Kata kunci yang dipantau',
                 'icon' => 'tag',
             ],
         ];
@@ -132,29 +125,32 @@
         {{-- PAGE HEADER                                                      --}}
         {{-- ================================================================ --}}
 
-        <header class="mb-8 flex flex-col gap-6 lg:items-start">
+        <header class="rg-page-intro mb-8">
 
             <div class="min-w-0">
 
                 <p class="mb-2 text-[11px] font-bold uppercase tracking-[.18em] text-slate-500">
-                    RISENGROWTH / DISCOVERY
+                    PENCARIAN POSTINGAN
                 </p>
 
                 <h1 class="text-[30px] font-bold tracking-[-.045em] text-slate-950 md:text-[38px]">
-                    Eksplorasi Prospek
+                    Pencarian postingan
                 </h1>
 
                 <p class="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
-                    Temukan percakapan yang relevan dengan layanan RisenDev.
+                    Cari percakapan yang relevan dengan layanan RisenDev. Hasilnya bisa ditinjau di menu Postingan ditemukan.
                 </p>
 
             </div>
 
-            <div class="rounded-xl border bg-white p-4 text-sm space-y-2">
-                <p><strong>OAuth:</strong> {{ $connectedAccount ? 'Terhubung' : 'Tidak tersedia' }} · Koneksi akun belum membuktikan izin public search.</p>
-                <p><strong>Threads search:</strong> @if(!$lastThreadsRun)Belum diverifikasi melalui run resmi.@elseif($lastThreadsRun->status === 'failed')Run terakhir gagal · {{ $lastThreadsRun->error_code }}.@elseRun terakhir berhasil · {{ $lastThreadsRun->fetched_count }} hasil. Izin dapat berubah.@endif</p>
-                <p class="text-xs text-slate-500">Capture manual tetap tersedia. Python mencari sumber web/API yang diizinkan, bukan Threads.</p>
-            </div>
+            <details class="rounded-xl border bg-white p-4 text-sm sm:w-full">
+                <summary class="cursor-pointer font-semibold">Status koneksi dan sumber pencarian</summary>
+                <div class="mt-3 space-y-2">
+                    <p><strong>Koneksi Threads:</strong> {{ $connectedAccount ? 'Terhubung' : 'Belum tersedia' }}. Koneksi akun belum tentu memiliki izin pencarian publik.</p>
+                    <p><strong>Pencarian Threads:</strong> @if(!$lastThreadsRun)Belum pernah diverifikasi.@elseif($lastThreadsRun->status === 'failed')Pencarian terakhir gagal · {{ $lastThreadsRun->error_code }}.@elsePencarian terakhir berhasil · {{ $lastThreadsRun->fetched_count }} hasil. Izin dapat berubah.@endif</p>
+                    <p class="text-xs text-slate-500">Postingan manual tetap bisa ditambahkan. Sumber web yang dikelola admin tidak mencakup Threads.</p>
+                </div>
+            </details>
             {{-- DISCOVERY FORM --}}
 
             @if ($isAdmin)
@@ -163,24 +159,24 @@
                     class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap">
                     @csrf
                     <div>
-                        <label for="run-source" class="rg-field-label">Sumber discovery</label>
+                        <label for="run-source" class="rg-field-label">Sumber pencarian</label>
                         <select id="run-source" name="source" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
-                            <option value="apify" @selected(old('source', 'apify') === 'apify')>Threads via Apify</option>
-                            <option value="threads" @selected(old('source') === 'threads')>Threads API resmi</option>
-                            <option value="python" @selected(old('source') === 'python')>Public web / API (Python)</option>
+                            <option value="apify" @selected(old('source', 'apify') === 'apify')>Threads (Apify)</option>
+                            <option value="threads" @selected(old('source') === 'threads')>Threads (koneksi resmi)</option>
+                            <option value="python" @selected(old('source') === 'python')>Sumber web terpilih</option>
                         </select>
                     </div>
 
                     <div class="w-full sm:w-auto">
 
                         <label for="run-keyword" class="rg-field-label">
-                            Pilih keyword pencarian
+                            Pilih kata kunci
                         </label>
 
                         <select id="run-keyword" name="keyword_id" required @disabled(!$canRunDiscovery)
                             class="w-full min-w-[220px] rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400">
                             <option value="">
-                                Pilih keyword
+                                Pilih kata kunci
                             </option>
 
                             @foreach ($enabledKeywords as $keyword)
@@ -195,8 +191,8 @@
                     </div>
 
                     <div>
-                        <label for="existing-apify-run" class="rg-field-label">ID run lama (opsional)</label>
-                        <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="Kosongkan untuk pencarian baru" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                        <label for="existing-apify-run" class="rg-field-label">ID pencarian sebelumnya (opsional)</label>
+                        <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="Isi jika ingin mengambil hasil dari pencarian sebelumnya" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
                     </div>
                     <button data-unavailable="{{ $canRunDiscovery ? 'false' : 'true' }}" id="discovery-run-button" type="submit" @disabled(!$canRunDiscovery)
                         class="inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
@@ -204,7 +200,7 @@
                             search
                         </span>
 
-                        <span data-run-label>Jalankan Pencarian</span>
+                        <span data-run-label>Mulai pencarian</span>
 
                     </button>
 
@@ -213,33 +209,45 @@
             @endif
 
         </header>
+
+        <div class="mt-5 flex flex-wrap gap-3"><div class="flex flex-wrap gap-3"><a class="rg-action bg-white" href="{{ route('keywords.index') }}">Atur kata kunci</a><a class="rg-action bg-white" href="{{ route('discovery.posts.index') }}">Lihat semua hasil</a></div>
+<details class="rg-panel bg-white border rounded-2xl"><summary class="cursor-pointer font-semibold">Tambahkan postingan secara manual</summary><p class="text-sm text-slate-500 mt-3">Tempel teks dan URL sebagai referensi. Tidak mengambil halaman atau memerlukan koneksi Threads.</p><form method="POST" action="{{ route('discovery.capture') }}" class="grid gap-4 mt-4 sm:grid-cols-2">@csrf
+<label class="text-sm">Platform<select name="platform" class="block w-full border rounded-lg p-2"><option value="threads">Threads</option><option value="web">Web</option><option value="instagram">Instagram</option></select></label>
+<label class="text-sm">Penulis<input name="username" maxlength="191" class="block w-full border rounded-lg p-2" value="{{ old('username') }}"></label>
+<label class="text-sm sm:col-span-2">URL asli<input name="url" type="url" required maxlength="2048" class="block w-full border rounded-lg p-2" value="{{ old('url') }}"></label>
+<label class="text-sm sm:col-span-2">Teks postingan<textarea name="body" required minlength="10" maxlength="20000" class="block w-full border rounded-lg p-2">{{ old('body') }}</textarea></label>
+<label class="text-sm">Topik terkait<input name="keyword" required maxlength="191" class="block w-full border rounded-lg p-2" value="{{ old('keyword') }}"></label><div class="flex items-end"><button class="bg-slate-950 text-white rounded-xl px-4 py-2">Simpan postingan</button></div>
+</form></details></div>
         <div data-storage-key="risengrowth-discovery-{{ auth()->id() }}" id="discovery-live-status" role="status" aria-live="polite" hidden class="mb-5 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-800"></div>
-        <button type="button" id="discovery-stop-tracking" hidden class="mb-3 text-xs text-blue-700 underline">Hentikan pemantauan permintaan (tidak membatalkan job)</button>
-        <p class="mb-5 text-xs text-slate-500" id="discovery-live-health">Status dan riwayat diperbarui otomatis setiap 4 detik.</p>
+        <button type="button" id="discovery-stop-tracking" hidden class="mb-3 text-xs text-blue-700 underline">Sembunyikan status pencarian (proses tetap berjalan)</button>
+        <p class="mb-5 text-xs text-slate-500" id="discovery-live-health">Status dan riwayat diperbarui otomatis.</p>
 
 
-        <section class="rg-panel mb-6 rounded-xl border border-slate-200 bg-white p-5 space-y-3">
-            <h2 class="text-lg font-bold">Threads via Apify</h2>
-            <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'APIFY_TOKEN belum diisi di server' }} · Provider {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }} · Otomatis {{ $apifySettings->automation_enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena kuota/rate limit' : '' }}</p>
-            <p class="text-xs text-slate-600">Maksimal 10 postingan per run. Batas start {{ $apifySettings->daily_runs }}/hari UTC (reset 07.00 WIB); sudah dicoba {{ $apifyStartsToday }}. Batas biaya per run USD {{ config('services.apify.probe_max_charge_usd') }}; budget bulanan aplikasi USD {{ config('services.apify.monthly_budget_usd') }}.</p>
-            <p class="text-xs text-slate-500">Run baru memakai kredit Apify. Untuk hasil yang sudah ada, masukkan ID run lama dan pilih keyword yang sama. Impor tidak memulai Actor baru. Saldo kredit gratis harus diperiksa di billing Apify.</p>
+        <details class="rg-panel mb-6 rounded-xl border border-slate-200 bg-white p-5">
+            <summary class="cursor-pointer text-lg font-bold">Batas dan pengaturan pencarian otomatis</summary>
+            <div class="mt-4 space-y-3">
+            <p class="text-sm text-slate-500">Bagian ini menjelaskan kuota pencarian dan pengaturan otomatis.</p>
+            <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'Token Apify belum diatur oleh admin' }} · Layanan pencarian {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }} · Otomatis {{ $apifySettings->automation_enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena batas penggunaan' : '' }}</p>
+            <p class="text-xs text-slate-600">Maksimal 10 postingan per pencarian. Batas harian {{ $apifySettings->daily_runs }} kali (reset pukul 07.00 WIB); sudah dicoba {{ $apifyStartsToday }} kali hari ini.</p>
+            <p class="text-xs text-slate-500">Pencarian baru memakai layanan Apify. Untuk mengambil hasil lama, masukkan ID pencarian sebelumnya dan pilih topik yang sama.</p>
             @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir dilaporkan USD {{ $apifyUsage['usage_usd'] }} / limit akun USD {{ $apifyUsage['limit_usd'] }} pada {{ \Illuminate\Support\Carbon::parse($apifyUsage['checked_at'])->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Ini bukan saldo kredit gratis real-time.</p>@endif
             @if($isAdmin)
                 <form method="POST" action="{{ route('discovery.apify.settings') }}" class="rg-provider-settings">
                     @csrf @method('PATCH')
                     <label class="rg-provider-toggle text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan Apify</label>
-                    <label class="rg-provider-toggle text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Cari otomatis</label>
-                    <label class="rg-provider-number">Batas start/hari UTC<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
-                    <label class="rg-provider-number">Interval minimum otomatis (menit)<input type="number" name="min_interval_minutes" min="1" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
+                    <label class="rg-provider-toggle text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Jalankan pencarian otomatis</label>
+                    <label class="rg-provider-number">Pencarian maksimal per hari<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
+                    <label class="rg-provider-number">Jeda minimal pencarian otomatis (menit)<input type="number" name="min_interval_minutes" min="1" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
                     <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan pengaturan</button>
                 </form>
             @endif
-            <p class="text-xs text-slate-500">Pencarian manual bisa dijalankan sebelum jadwal otomatis, selama tidak ada proses aktif dan batas run/budget masih tersedia. Jadwal otomatis memakai interval yang lebih besar antara pengaturan di sini dan interval di Kata Kunci. Interval keyword yang kosong mengikuti pengaturan ini.</p>
-            <details class="text-xs text-slate-600"><summary class="cursor-pointer font-semibold">Jadwal keyword aktif</summary>
-                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? $apifySettings->min_interval_minutes) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Eksekusi mengikuti kuota harian, worker, dan status otomatis.</p>@endforeach
+            <p class="text-xs text-slate-500">Topik aktif dicari mengikuti jeda yang diatur. Topik tanpa jeda khusus memakai pengaturan ini.</p>
+            <details class="text-xs text-slate-600"><summary class="cursor-pointer font-semibold">Lihat jadwal kata kunci aktif</summary>
+                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? $apifySettings->min_interval_minutes) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Pencarian mengikuti batas harian dan pengaturan otomatis.</p>@endforeach
             </details>
-            <a href="{{ route('leads.index', ['source' => 'apify']) }}" class="inline-block text-sm font-semibold text-blue-700 underline">Buka lead hasil Apify →</a>
-        </section>
+            <a href="{{ route('discovery.posts.index') }}" class="inline-block text-sm font-semibold text-blue-700 underline">Lihat postingan yang ditemukan →</a>
+            </div>
+        </details>
 
         {{-- ================================================================ --}}
         {{-- FLASH MESSAGES                                                   --}}
@@ -262,11 +270,11 @@
                 <div>
 
                     <p class="text-sm font-semibold text-slate-800">
-                        Pencarian dikelola Administrator
+                        Pencarian dikelola admin
                     </p>
 
                     <p class="mt-1 text-xs leading-relaxed text-slate-500">
-                        Kamu tetap dapat melihat hasil discovery dan riwayat pencarian tim.
+                        Kamu tetap dapat melihat hasil pencarian dan riwayat pencarian tim.
                     </p>
 
                 </div>
@@ -289,7 +297,7 @@
                         </p>
 
                         <p class="mt-1 text-xs leading-relaxed text-amber-800">
-                            Untuk mencari postingan Threads, buka Settings lalu Connect Threads. Akun harus memberikan izin threads_keyword_search. Pilihan Public web / API hanya mencari sumber web yang dikonfigurasi, bukan Threads.
+                            Untuk mencari postingan Threads, hubungkan akun melalui Pengaturan. Pencarian Threads bergantung pada izin yang diberikan platform. Pilihan sumber web hanya mencari situs yang telah disetujui admin.
                         </p>
 
                     </div>
@@ -298,7 +306,7 @@
 
                 <a href="{{ route('settings.index') }}"
                     class="inline-flex items-center gap-1 text-sm font-semibold text-amber-900 hover:underline">
-                    Buka Settings
+                    Buka pengaturan
 
                     <span class="material-symbols-outlined text-[17px]">
                         arrow_forward
@@ -319,11 +327,11 @@
                     <div>
 
                         <p class="text-sm font-semibold text-amber-900">
-                            Belum ada keyword aktif
+                            Belum ada kata kunci aktif
                         </p>
 
                         <p class="mt-1 text-xs text-amber-800">
-                            Tambahkan keyword Threads sebelum menjalankan pencarian.
+                            Tambahkan kata kunci Threads sebelum menjalankan pencarian.
                         </p>
 
                     </div>
@@ -331,7 +339,7 @@
                 </div>
 
                 <a href="{{ route('keywords.index') }}" class="text-sm font-semibold text-amber-900 hover:underline">
-                    Kelola Keyword →
+                    Kelola kata kunci →
                 </a>
 
             </div>
@@ -346,7 +354,7 @@
                     @if ($apifySettings->enabled)
                         Apify {{ $apifyConfigured ? 'aktif · token tersedia' : 'aktif · token belum tersedia' }}
                     @else
-                        Threads API terhubung · Akun
+                        Akun Threads terhubung ·
                         <span class="font-semibold text-slate-700">{{ data_get($connectedAccount, 'username') }}</span>
                     @endif
                 </span>
@@ -354,7 +362,7 @@
                 <span class="hidden text-slate-300 sm:inline">·</span>
 
                 <span>
-                    {{ $enabledKeywords->count() }} keyword aktif
+                    {{ $enabledKeywords->count() }} kata kunci aktif
                 </span>
 
                 <span class="hidden text-slate-300 sm:inline">·</span>
@@ -422,7 +430,7 @@
                         </h2>
 
                         <p class="mt-1 text-xs text-slate-500">
-                            Koneksi media sosial workspace.
+                            Status koneksi akun media sosial.
                         </p>
 
                     </div>
@@ -516,12 +524,12 @@
                         </h3>
 
                         <p class="mt-2 text-sm text-slate-500">
-                            Hubungkan akun Threads melalui Settings.
+                            Hubungkan akun Threads melalui Pengaturan.
                         </p>
 
                         <a href="{{ route('settings.index') }}"
                             class="mt-4 inline-flex rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
-                            Buka Settings
+                            Buka pengaturan
                         </a>
 
                     </div>
@@ -539,7 +547,7 @@
                     <div>
 
                         <h2 class="text-lg font-bold text-slate-950">
-                            Keyword pencarian
+                            Kata kunci pencarian
                         </h2>
 
                         <p class="mt-1 text-xs text-slate-500">
@@ -550,7 +558,7 @@
 
                     <a href="{{ route('keywords.index') }}"
                         class="shrink-0 text-xs font-semibold text-blue-700 hover:underline">
-                        Kelola keyword →
+                        Kelola kata kunci →
                     </a>
 
                 </div>
@@ -571,7 +579,7 @@
 
                             <p class="mt-0.5 text-xs text-slate-500">
 
-                                {{ ucfirst(str_replace('_', ' ', data_get($keyword, 'category', '-'))) }}
+                                {{ ['direct_demand'=>'Kebutuhan langsung','business_pain'=>'Masalah bisnis','developer_community'=>'Komunitas developer'][data_get($keyword, 'category', '')] ?? 'Kategori belum tersedia' }}
 
                                 <span class="mx-1">·</span>
 
@@ -600,11 +608,11 @@
                         </span>
 
                         <h3 class="mt-2 font-semibold text-slate-900">
-                            Belum ada keyword
+                            Belum ada kata kunci
                         </h3>
 
                         <p class="mt-2 text-sm text-slate-500">
-                            Tambahkan keyword untuk memulai discovery.
+                            Tambahkan kata kunci untuk memulai pencarian.
                         </p>
 
                     </div>
@@ -630,7 +638,7 @@
                     </h2>
 
                     <p class="mt-1 text-xs text-slate-500">
-                        Riwayat proses dan hasil pencarian Threads.
+                        Riwayat pencarian dan jumlah postingan yang ditemukan.
                     </p>
 
                 </div>
@@ -662,14 +670,14 @@
 
 
                     <label for="discovery-keyword" class="sr-only">
-                        Keyword
+                        Kata kunci
                     </label>
 
                     <select id="discovery-keyword" name="keyword"
                         class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
 
                         <option value="">
-                            Semua keyword
+                            Semua kata kunci
                         </option>
 
                         @foreach ($keywords as $keyword)
@@ -707,7 +715,7 @@
                         <tr class="border-y border-slate-100 text-left text-xs text-slate-500">
 
                             <th class="py-3 pr-4 font-semibold">
-                                Keyword
+                                Kata kunci
                             </th>
 
                             <th class="py-3 pr-4 font-semibold">
@@ -754,25 +762,9 @@
 
         </section>
 
-        <section class="rg-panel mt-6 rounded-xl border border-slate-200 bg-white p-5 space-y-4">
-            <h2 class="text-lg font-bold">Review postingan ditemukan</h2>
-            <p class="text-xs text-slate-500">Prioritas Indonesia memakai perkiraan kata dalam teks, bukan lokasi akun. Tidak menyaring hasil dari negara lain. Untuk pencarian, coba keyword spesifik seperti “butuh website”, “cari jasa website”, atau “website toko”.</p>
-            <p class="text-sm text-slate-600">Sumber Python opsional: {{ $activeSources->join(', ') ?: 'Tidak ada' }}. Scan berhasil terakhir: {{ $lastSuccessfulScan ? \Illuminate\Support\Carbon::parse($lastSuccessfulScan, 'UTC')->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') : 'Belum ada' }}.</p>
-            <p class="text-xs text-slate-500">Threads via Apify memakai token server. Opsi Threads API resmi memerlukan akun dan izin Meta. Hasil public web berasal dari sumber yang dikonfigurasi admin.</p>
-            <form method="GET" action="{{ route('discovery.index') }}" class="flex flex-wrap gap-3">
-                <label class="flex items-center gap-2 text-sm text-slate-600"><input type="hidden" name="prefer_indonesian" value="0"><input type="checkbox" name="prefer_indonesian" value="1" @checked((bool) ($filters['prefer_indonesian'] ?? true))> Utamakan bahasa Indonesia</label>
-<label class="text-sm">Kategori<select name="category" class="rounded-lg border p-2"><option value="">Semua kategori</option>@foreach(['business' => 'Business lead', 'community' => 'Community opportunity', 'not_relevant' => 'Not relevant'] as $value => $label)<option value="{{ $value }}" @selected(($filters['category'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></label>
-                <label class="text-sm">Kualifikasi
-                    <select name="qualification" class="rounded-lg border border-slate-200 p-2">
-                        <option value="">Semua postingan</option>
-                        @foreach(['qualified' => 'Qualified', 'uncertain' => 'Perlu review', 'rejected' => 'Ditolak'] as $value => $label)
-                            <option value="{{ $value }}" @selected(($filters['qualification'] ?? '') === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Filter</button>
-            </form>
-            <div id="discovery-post-reviews" class="rg-review-list">@include('discovery.partials.post-reviews')</div>
+        <section class="rg-panel mt-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div><h2 class="text-lg font-bold">Lihat semua postingan yang ditemukan</h2><p class="mt-1 text-sm text-slate-500">Tinjau hasil scraping dan kelompokkan berdasarkan jenis peluang di halaman khusus.</p></div>
+            <a href="{{ route('discovery.posts.index') }}" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">forum</span>Buka hasil postingan</a>
         </section>
     </div>
 

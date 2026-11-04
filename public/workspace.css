@@ -23,6 +23,12 @@
     overflow-wrap: anywhere;
 }
 
+.rg-page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.rg-page-intro > div:first-child { min-width: 0; max-width: 760px; }
+.rg-page-intro h1 { margin-top: 8px; font-size: clamp(28px, 3vw, 38px); line-height: 1.2; letter-spacing: -.04em; font-weight: 750; color: #111827; }
+.rg-page-intro p { margin-top: 8px; max-width: 680px; color: #64748b; font-size: 14px; line-height: 1.65; }
+.rg-page-eyebrow { color: #64748b; font-size: 11px; line-height: 1.4; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+
 .rg-page h2 { line-height: 1.4; }
 .rg-page p { line-height: 1.65; }
 .rg-page :where(.grid, .flex) > :where(div, section, article, form, label) { min-width: 0; }

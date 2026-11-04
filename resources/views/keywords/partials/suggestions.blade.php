@@ -24,7 +24,7 @@
             @unless($compact ?? false)<p>{{ $group['description'] }}</p>@endunless
             <div class="rg-keyword-chips">
                 @foreach($group['phrases'] as $phrase)
-                    <button type="button" data-keyword-suggestion="{{ $phrase }}" data-keyword-category="{{ $category }}" aria-label="Gunakan keyword {{ $phrase }}">{{ $phrase }}<span aria-hidden="true">＋</span></button>
+                    <button type="button" data-keyword-suggestion="{{ $phrase }}" data-keyword-category="{{ $category }}" aria-label="Gunakan kata kunci {{ $phrase }}">{{ $phrase }}<span aria-hidden="true">＋</span></button>
                 @endforeach
             </div>
         </div>

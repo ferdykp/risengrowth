@@ -21,7 +21,7 @@
                     <label for="quick-purpose" class="rg-field-label">Mau membuat apa?</label>
                     <select id="quick-purpose" name="purpose" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
                         <option value="comment" @selected(old('purpose', 'comment') === 'comment')>Komentar publik</option>
-                        <option value="dm" @selected(old('purpose') === 'dm')>Draft DM pribadi</option>
+                        <option value="dm" @selected(old('purpose') === 'dm')>Pesan pribadi</option>
                     </select>
                     <p class="mt-2 text-xs text-slate-500">DM dibuat sebagai pembuka percakapan, bukan menyalin komentar publik. Salin hasilnya, buka profil, lalu kirim sendiri di Threads jika penerima mengizinkan pesan.</p>
                 </div>
@@ -62,10 +62,10 @@
                     </div>
                     <form method="POST" action="{{ route('comments.suggestions.update', $suggestion->id, false) }}" class="space-y-3">
                         @csrf @method('PATCH')
-                        <label for="suggestion-{{ $suggestion->id }}" class="rg-field-label">{{ $suggestion->purpose === 'dm' ? 'DM (boleh diedit)' : 'Komentar (boleh diedit)' }}</label>
+                        <label for="suggestion-{{ $suggestion->id }}" class="rg-field-label">{{ $suggestion->purpose === 'dm' ? 'Pesan pribadi (boleh diedit)' : 'Komentar (boleh diedit)' }}</label>
                         <textarea id="suggestion-{{ $suggestion->id }}" name="body" rows="4" required minlength="10" maxlength="2000" class="w-full rounded-xl border border-slate-200 p-3 text-sm">{{ $suggestion->body }}</textarea>
                         <div class="flex flex-wrap gap-3">
-                            <button type="button" data-copy-target="suggestion-{{ $suggestion->id }}" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">{{ $suggestion->purpose === 'dm' ? 'Salin DM' : 'Salin komentar' }}</button>
+                            <button type="button" data-copy-target="suggestion-{{ $suggestion->id }}" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">{{ $suggestion->purpose === 'dm' ? 'Salin pesan pribadi' : 'Salin komentar' }}</button>
                             <button type="submit" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">Simpan edit</button>
                         </div>
                     </form>
@@ -74,7 +74,7 @@
                     @else
                         <form method="POST" action="{{ route('comments.suggestions.replied', $suggestion->id) }}" class="space-y-3 border-t pt-3">@csrf
                         <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="confirm_replied" value="1" required><span>Saya sudah mengirim balasan ini sendiri.</span></label>
-                        <button class="rg-action">Mark as Replied</button></form>
+                        <button class="rg-action">Tandai sudah dibalas</button></form>
                     @endif
                 </article>
             @empty

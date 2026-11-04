@@ -56,21 +56,20 @@ class DiscoveryController extends Controller
             $runsQuery->where('r.search_keyword_id', (int) $filters['keyword']);
         }
 
-        $analyses = AiAnalysis::query()->with('post')
-            ->whereIn('id', AiAnalysis::query()->selectRaw('MAX(id)')->groupBy('discovered_post_id'));
-        if ((bool) ($filters['prefer_indonesian'] ?? true)) {
-            app(IndonesianPostPreference::class)->prioritize($analyses, 'ai_analyses.discovered_post_id');
-        }
-        if (filled($filters['qualification'] ?? null)) {
-            $analyses->where('output->status', $filters['qualification']);
-        }
-        if (filled($filters['category'] ?? null)) {
-            $analyses->where('output->category', $filters['category']);
-        }
-        $postReviews = $analyses->latest('id')->paginate(15, ['*'], 'posts_page')->withQueryString();
-
         if ($request->expectsJson()) {
             $runs = (clone $runsQuery)->orderByDesc('r.id')->paginate(12)->withQueryString();
+            $analyses = AiAnalysis::query()->with('post')
+                ->whereIn('id', AiAnalysis::query()->selectRaw('MAX(id)')->groupBy('discovered_post_id'));
+            if ((bool) ($filters['prefer_indonesian'] ?? true)) {
+                app(IndonesianPostPreference::class)->prioritize($analyses, 'ai_analyses.discovered_post_id');
+            }
+            if (filled($filters['qualification'] ?? null)) {
+                $analyses->where('output->status', $filters['qualification']);
+            }
+            if (filled($filters['category'] ?? null)) {
+                $analyses->where('output->category', $filters['category']);
+            }
+            $postReviews = $analyses->latest('id')->paginate(15, ['*'], 'posts_page')->withQueryString();
             $tracked = null;
             if (filled($filters['track_keyword'] ?? null) && filled($filters['track_source'] ?? null)) {
                 $tracked = DB::table('discovery_runs')
@@ -93,10 +92,6 @@ class DiscoveryController extends Controller
             ])->header('Cache-Control', 'no-store, private');
         }
 
-        $sourcePath = config('services.risengrowth_python.sources');
-        $sourceConfig = is_readable($sourcePath) ? json_decode(file_get_contents($sourcePath), true) : [];
-        $sourceConfig = is_array($sourceConfig) ? $sourceConfig : [];
-
         $apifySettings = app(ApifyDiscoverySettings::class)->get();
         $nextScans = [];
         $lastScans = DB::table('discovery_runs')->where('source_type', 'apify')->select('search_keyword_id')->selectRaw('MAX(created_at) as last_attempt')->groupBy('search_keyword_id')->pluck('last_attempt', 'search_keyword_id');
@@ -114,9 +109,6 @@ class DiscoveryController extends Controller
             'nextScans' => $nextScans,
             'accounts' => $accounts,
             'lastThreadsRun' => DB::table('discovery_runs')->where('source_type', 'threads')->whereIn('status', ['completed', 'failed'])->latest('id')->first(),
-            'postReviews' => $postReviews,
-            'activeSources' => collect($sourceConfig['sources'] ?? [])->where('enabled', true)->pluck('id'),
-            'lastSuccessfulScan' => DB::table('discovery_runs')->whereIn('status', ['completed', 'partial'])->max('finished_at'),
             'keywords' => $keywords,
             'runs' => $runsQuery->orderByDesc('r.created_at')->orderByDesc('r.id')->paginate(12)->withQueryString(),
             'totalRuns' => DB::table('discovery_runs')->count(),

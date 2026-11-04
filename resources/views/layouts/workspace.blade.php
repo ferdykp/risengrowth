@@ -24,14 +24,6 @@
 </head>
 <body class="antialiased min-h-screen">
 <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] bg-white p-3">Lewati ke konten</a>
-@php
-    $navItems = [
-      ['overview', 'Today', 'today'],
-      ['discovery.index', 'Discover', 'travel_explore'],
-      ['relationships.index', 'Relationships', 'group'],
-      ['studio.index', 'Content Studio', 'edit_note'],
-    ];
-@endphp
 <div class="lg:hidden sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur rg-shadow px-4 py-3 flex items-center justify-between">
   <div class="min-w-0"><a href="{{ route('overview') }}" class="font-extrabold tracking-tight">RisenGrowth <span class="text-[10px] font-semibold bg-slate-100 rounded px-1.5 py-1">V2</span></a>
     @include('components.wib-clock', ['compact' => true])
@@ -45,25 +37,36 @@
     <span class="text-[10px] font-semibold rounded bg-[#f1effa] px-1.5 py-1 text-slate-500">V2</span>
   </div>
   <div class="px-4 py-4 flex-1 overflow-y-auto">
-    <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 mb-2">Workspace</div>
-    <nav aria-label="Menu workspace" class="space-y-0.5">
-       @foreach($navItems as [$routeName, $label, $icon])
-          <a href="{{ route($routeName) }}" class="rg-nav" @if(request()->routeIs($routeName)) aria-current="page" @endif>
-             <span class="material-symbols-outlined" aria-hidden="true">{{ $icon }}</span>
-             <span class="flex-1">{{ $label }}</span>
-             @if($routeName==='leads.index' && ($workspaceNewLeadsCount ?? 0)>0)<span class="rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-bold">{{ $workspaceNewLeadsCount }}</span>@endif
-             @if($routeName==='reviews.index' && ($workspacePendingReviewsCount ?? 0)>0)<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-bold">{{ $workspacePendingReviewsCount }}</span>@endif
-          </a>
-       @endforeach
+    <nav aria-label="Menu utama" class="space-y-6">
+      <section aria-labelledby="nav-start">
+        <h2 id="nav-start" class="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 mb-2">Mulai</h2>
+        <div class="space-y-0.5">
+          <a href="{{ route('overview') }}" class="rg-nav" @if(request()->routeIs('overview')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">today</span><span>Ringkasan</span></a>
+          <a href="{{ route('activity.index') }}" class="rg-nav" @if(request()->routeIs('activity.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">history</span><span>Aktivitas terbaru</span></a>
+        </div>
+      </section>
+      <section aria-labelledby="nav-find">
+        <h2 id="nav-find" class="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 mb-2">Temukan peluang</h2>
+        <div class="space-y-0.5">
+          <a href="{{ route('discovery.posts.index') }}" class="rg-nav" @if(request()->routeIs('discovery.posts.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">forum</span><span class="flex-1">Postingan ditemukan</span></a>
+          <a href="{{ route('discovery.index') }}" class="rg-nav" @if(request()->routeIs('discovery.index')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">travel_explore</span><span>Pencarian postingan</span></a>
+          <a href="{{ route('keywords.index') }}" class="rg-nav" @if(request()->routeIs('keywords.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">sell</span><span>Kata kunci</span></a>
+          <a href="{{ route('leads.index') }}" class="rg-nav" @if(request()->routeIs('leads.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">inbox</span><span class="flex-1">Kotak masuk prospek</span>@if(($workspaceNewLeadsCount ?? 0)>0)<span class="rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-bold">{{ $workspaceNewLeadsCount }}</span>@endif</a>
+        </div>
+      </section>
+      <section aria-labelledby="nav-engage">
+        <h2 id="nav-engage" class="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 mb-2">Bangun hubungan</h2>
+        <div class="space-y-0.5">
+          <a href="{{ route('relationships.index') }}" class="rg-nav" @if(request()->routeIs('relationships.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">group</span><span>Relasi & tindak lanjut</span></a>
+          <a href="{{ route('comments.index') }}" class="rg-nav" @if(request()->routeIs('comments.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>Buat balasan</span></a>
+          <a href="{{ route('reviews.index') }}" class="rg-nav" @if(request()->routeIs('reviews.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">fact_check</span><span class="flex-1">Tinjau draf balasan</span>@if(($workspacePendingReviewsCount ?? 0)>0)<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-bold">{{ $workspacePendingReviewsCount }}</span>@endif</a>
+          <a href="{{ route('studio.index') }}" class="rg-nav" @if(request()->routeIs('studio.*')) aria-current="page" @endif><span class="material-symbols-outlined" aria-hidden="true">edit_note</span><span>Rencana konten</span></a>
+        </div>
+      </section>
     </nav>
-    <details class="mt-5"><summary class="rg-nav cursor-pointer">Alat workspace</summary>
-    @foreach(['leads.index' => 'Kotak Masuk Prospek', 'keywords.index' => 'Kata Kunci', 'comments.index' => 'Reply Assistant', 'reviews.index' => 'Antrean Review', 'activity.index' => 'Aktivitas'] as $toolRoute => $toolLabel)
-    <a class="rg-nav" href="{{ route($toolRoute) }}">{{ $toolLabel }}</a>
-    @endforeach
-    </details>
     @if(auth()->user()?->role === 'admin')
        <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 mt-7 mb-2">Administrasi</div>
-       <a href="{{ route('admin.users.index') }}" class="rg-nav" @if(request()->routeIs('admin.users.*')) aria-current="page" @endif><span class="material-symbols-outlined">group</span><span>User Management</span></a>
+       <a href="{{ route('admin.users.index') }}" class="rg-nav" @if(request()->routeIs('admin.users.*')) aria-current="page" @endif><span class="material-symbols-outlined">group</span><span>Kelola pengguna</span></a>
     @endif
   </div>
   <div class="px-4 pb-4 pt-3 border-t border-slate-100 space-y-1">
@@ -77,11 +80,11 @@
 </aside>
 <div class="rg-content min-h-screen min-w-0">
   <header class="hidden lg:flex sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-100 h-[72px] items-center justify-between px-6 xl:px-10">
-    <div class="flex gap-2 items-center text-sm text-slate-500"><span>Workspace</span><span class="text-slate-300">/</span><strong class="text-slate-900 font-semibold">@yield('page_heading','Ikhtisar')</strong></div>
+    <div class="flex gap-2 items-center text-sm text-slate-500"><span>Ruang kerja</span><span class="text-slate-300">/</span><strong class="text-slate-900 font-semibold">@yield('page_heading','Ringkasan')</strong></div>
     <div class="flex items-center gap-3">
       @include('components.wib-clock', ['compact' => false])
       <a href="{{ route('leads.index') }}" class="hidden xl:inline-flex text-sm text-slate-500 hover:text-slate-950 items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">search</span>Cari prospek</a>
-      <a href="{{ route('discovery.index') }}" class="bg-slate-950 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-slate-800 inline-flex gap-1.5 items-center"><span class="material-symbols-outlined text-[17px]">travel_explore</span>Eksplorasi</a>
+      <a href="{{ route('discovery.index') }}" class="bg-slate-950 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-slate-800 inline-flex gap-1.5 items-center"><span class="material-symbols-outlined text-[17px]">travel_explore</span>Mulai pencarian</a>
     </div>
   </header>
   <main id="main-content" class="rg-page">

@@ -6,6 +6,7 @@ use App\Http\Controllers\ApifySettingsController;
 use App\Http\Controllers\CommentGeneratorController;
 use App\Http\Controllers\CommentSuggestionController;
 use App\Http\Controllers\ContentStudioController;
+use App\Http\Controllers\DiscoveredPostController;
 use App\Http\Controllers\DiscoveredPostReviewController;
 use App\Http\Controllers\DiscoveryController;
 use App\Http\Controllers\DiscoveryRunController;
@@ -64,6 +65,7 @@ Route::middleware(['auth', 'active.account', 'initial.password'])->group(functio
     Route::patch('/discovery/posts/{post}', DiscoveredPostReviewController::class)->middleware('throttle:account-mutations')->name('discovery.posts.review');
     Route::get('/leads/{lead}', LeadDetailController::class)->name('leads.show');
     Route::get('/discovery', DiscoveryController::class)->name('discovery.index');
+    Route::get('/discovery/posts', DiscoveredPostController::class)->name('discovery.posts.index');
 
     Route::get('/keywords', [KeywordController::class, 'index'])->name('keywords.index');
     Route::post('/keywords', [KeywordController::class, 'store'])->middleware('throttle:account-mutations')->name('keywords.store');

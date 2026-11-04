@@ -1,12 +1,12 @@
 @extends('layouts.workspace')
-@section('title', 'Aktivitas')
-@section('page_heading', 'Aktivitas')
+@section('title', 'Aktivitas terbaru')
+@section('page_heading', 'Aktivitas terbaru')
 @section('content')
 <div class="space-y-6">
-            <div><p class="text-[11px] font-bold tracking-[.18em] text-slate-500 uppercase">RisenGrowth / Activity</p>
-                <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mt-2">Aktivitas & Engagement</h1>
-                <p class="mt-2 text-sm text-slate-500">Pantau keputusan review, percobaan pengiriman, dan aktivitas akun tanpa menganggap persetujuan sebagai publikasi.</p>
-            </div>
+            <header class="rg-page-intro"><div><p class="rg-page-eyebrow">RIWAYAT AKUN</p>
+                <h1>Aktivitas terbaru</h1>
+                <p>Lihat keputusan peninjauan, status balasan, dan perubahan yang tercatat di akunmu.</p>
+            </div></header>
             <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
                 @foreach([['label'=>'Keputusan review','value'=>$approvalCount],['label'=>'Percobaan engagement','value'=>$attemptCount],['label'=>'Terbit terkonfirmasi','value'=>$publishedCount],['label'=>'Gagal / belum pasti','value'=>$failedCount]] as $metric)
                     <article class="rg-panel rounded-2xl bg-white border border-slate-200 p-5"><p class="text-xs text-slate-500 font-semibold">{{ $metric['label'] }}</p><p class="text-3xl font-bold mt-4 tabular-nums">{{ number_format($metric['value'], 0, ',', '.') }}</p></article>
@@ -14,7 +14,7 @@
             </div>
             <div class="flex flex-col sm:flex-row gap-3 justify-between">
                 <nav aria-label="Kategori aktivitas" class="flex flex-wrap gap-2">
-                    @foreach(['all'=>'Semua','approvals'=>'Review','engagements'=>'Pengiriman','events'=>'Log aktivitas'] as $key=>$label)
+                    @foreach(['all'=>'Semua aktivitas','approvals'=>'Keputusan review','engagements'=>'Status balasan','events'=>'Riwayat sistem'] as $key=>$label)
                         <a href="{{ route('activity.index', ['tab'=>$key]) }}" class="text-xs font-semibold rounded-lg px-3.5 py-2.5 border {{ $tab===$key?'bg-black text-white border-black':'bg-white text-slate-700 border-slate-200 hover:border-slate-400' }}">{{ $label }}</a>
                     @endforeach
                 </nav>
@@ -40,7 +40,7 @@
                                 <div class="min-w-0"><p class="text-sm font-semibold">{{ '@'.($approval->draft?->lead?->post?->username ?: 'pengguna') }}</p>
                                     <p class="text-sm text-slate-600 mt-1 break-words">{{ \Illuminate\Support\Str::limit($approval->approved_body_snapshot ?: $approval->draft?->body, 190) }}</p>
                                     @if($approval->reason)<p class="text-xs text-slate-500 mt-2">Alasan: {{ $approval->reason }}</p>@endif
-                                    @if($approval->draft?->lead)<a href="{{ route('leads.show', $approval->draft->lead) }}" class="inline-block mt-2 text-xs font-semibold text-blue-700 hover:underline">Detail prospek →</a>@endif
+                                    @if($approval->draft?->lead)<a href="{{ route('leads.show', $approval->draft->lead) }}" class="inline-block mt-2 text-xs font-semibold text-blue-700 hover:underline">Lihat detail peluang →</a>@endif
                                 </div>
                                 <div class="sm:text-right shrink-0"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {{ $approval->decision === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">{{ $approval->decision === 'approved' ? 'Disetujui' : 'Ditolak' }}</span><p class="text-xs text-slate-500 mt-2">{{ $approval->decided_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</p></div>
                             </article>
@@ -65,11 +65,11 @@
                                 <div class="min-w-0"><p class="text-sm font-semibold">{{ '@'.($attempt->draft?->lead?->post?->username ?: 'pengguna') }} <span class="font-normal text-slate-500">· {{ $attempt->method === 'manual' ? 'Manual' : 'API' }}</span></p>
                                     <p class="text-sm text-slate-600 mt-1 break-words">{{ \Illuminate\Support\Str::limit($attempt->approved_body_snapshot, 190) }}</p>
                                     @if($attempt->failure_summary)<p class="mt-2 text-xs text-rose-700">{{ $attempt->failure_summary }}</p>@endif
-                                    @if($attempt->draft?->lead)<a class="inline-block mt-2 text-xs font-semibold text-blue-700 hover:underline" href="{{ route('leads.show', $attempt->draft->lead) }}">Detail prospek →</a>@endif
+                                    @if($attempt->draft?->lead)<a class="inline-block mt-2 text-xs font-semibold text-blue-700 hover:underline" href="{{ route('leads.show', $attempt->draft->lead) }}">Lihat detail peluang →</a>@endif
                                 </div>
                                 <div class="shrink-0 sm:text-right"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {{ $confirmed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700' }}">{{ $label }}</span><p class="text-xs text-slate-500 mt-2">{{ $attempt->attempted_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') ?: $attempt->created_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</p></div>
                             </article>
-                        @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada percobaan engagement tercatat.</p> @endforelse
+                        @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada percobaan balasan tercatat.</p> @endforelse
                     </div>
                     @if($attempts->hasPages())<div class="p-5 border-t border-slate-100">{{ $attempts->links() }}</div>@endif
                 </section>
@@ -79,7 +79,7 @@
                     <div class="p-5 border-b border-slate-100"><h2 id="events-heading" class="text-base font-bold">Log aktivitas</h2><p class="text-xs text-slate-500 mt-1">Peristiwa internal yang tersimpan untuk akun ini.</p></div>
                     <div class="divide-y divide-slate-100">
                         @forelse($events as $event)
-                            <article class="p-5 flex flex-wrap items-center justify-between gap-2"><div><p class="text-sm font-semibold">{{ str_replace('_', ' ', $event->event) }}</p>@if($event->lead_id)<a href="{{ route('leads.show', $event->lead_id) }}" class="text-xs text-blue-700 hover:underline">Detail prospek →</a>@endif</div><time class="text-xs text-slate-500" datetime="{{ $event->created_at?->toIso8601String() }}">{{ $event->created_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</time></article>
+                            <article class="p-5 flex flex-wrap items-center justify-between gap-2"><div><p class="text-sm font-semibold">{{ ['relationship_updated' => 'Catatan relasi diperbarui', 'lead_status_updated' => 'Status peluang diperbarui'][$event->event] ?? 'Aktivitas akun' }}</p>@if($event->lead_id)<a href="{{ route('leads.show', $event->lead_id) }}" class="text-xs text-blue-700 hover:underline">Lihat detail peluang →</a>@endif</div><time class="text-xs text-slate-500" datetime="{{ $event->created_at?->toIso8601String() }}">{{ $event->created_at?->copy()->timezone('Asia/Jakarta')->format('d M Y, H:i \W\I\B') }}</time></article>
                         @empty <p class="p-10 text-center text-sm text-slate-500">Belum ada aktivitas tercatat.</p> @endforelse
                     </div>
                     @if($events->hasPages())<div class="p-5 border-t border-slate-100">{{ $events->links() }}</div>@endif

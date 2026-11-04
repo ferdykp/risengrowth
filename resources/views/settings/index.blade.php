@@ -3,18 +3,18 @@
 @section('page_heading', 'Pengaturan')
 @section('content')
     <div class="space-y-6">
-        <div>
-            <p class="text-[11px] font-bold tracking-[.18em] text-slate-500 uppercase">RISENGROWTH / SETTINGS</p>
-            <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mt-2">Pengaturan</h1>
-            <p class="mt-2 text-sm text-slate-500">Kelola profil, integrasi, dan preferensi workspace.</p>
-        </div>
+        <header class="rg-page-intro"><div>
+            <p class="rg-page-eyebrow">AKUN DAN INTEGRASI</p>
+            <h1>Pengaturan</h1>
+            <p>Perbarui informasi akun dan pengaturan pencarian.</p>
+        </div></header>
 
 
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
             <div class="xl:col-span-7 space-y-5">
                 <section class="rg-panel rounded-2xl bg-white border border-slate-200 p-6">
                     <h2 class="text-lg font-bold">Profil akun</h2>
-                    <p class="text-xs text-slate-500 mt-1">Informasi yang digunakan untuk masuk ke workspace.</p>
+                    <p class="text-xs text-slate-500 mt-1">Informasi yang digunakan untuk masuk ke akun.</p>
                     <form action="{{ route('settings.profile') }}" method="POST" class="mt-5 space-y-4">@csrf
                         @method('PATCH')
                         <div><label class="block text-xs font-semibold mb-2" for="name">Nama</label><input
@@ -35,11 +35,10 @@
                 <section class="rg-panel rounded-2xl bg-white border border-slate-200 p-6">
                     <h2 class="text-lg font-bold">Preferensi pencarian</h2>
                     <p class="text-xs text-slate-500 mt-1">Preferensi ini disimpan, tetapi pencarian otomatis belum
-                        dijalankan sebelum integrasi Threads siap.</p>
+                        berjalan sebelum koneksi Threads siap.</p>
                     <form action="{{ route('settings.preferences') }}" method="POST" class="mt-5 space-y-5">@csrf
                         @method('PATCH')
-                        <div><label for="discovery_interval_minutes" class="block text-xs font-semibold mb-2">Interval
-                                pencarian yang diinginkan</label><select id="discovery_interval_minutes"
+                        <div><label for="discovery_interval_minutes" class="block text-xs font-semibold mb-2">Jeda antarpencarian</label><select id="discovery_interval_minutes"
                                 name="discovery_interval_minutes"
                                 class="w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm">
                                 @foreach ([30 => '30 menit', 60 => '1 jam', 180 => '3 jam', 360 => '6 jam', 720 => '12 jam', 1440 => '24 jam'] as $interval => $label)
@@ -54,7 +53,7 @@
                                         class="block text-xs text-slate-500 mt-1">Preferensi tersimpan; pengiriman
                                         notifikasi belum diaktifkan.</span></span></label></div>
                         <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Status
-                            automation: <strong>Belum aktif</strong>. Menyimpan pengaturan tidak menjalankan job terjadwal.
+                            pencarian otomatis: <strong>Belum aktif</strong>. Menyimpan pengaturan tidak menjalankan pencarian terjadwal.
                         </div>
                         <button
                             class="rounded-lg bg-black px-4 py-2.5 text-white text-sm font-semibold hover:bg-slate-800">Simpan
@@ -74,7 +73,7 @@
 
                             <p class="mt-1 text-xs text-slate-500">
                                 Hubungkan akun Threads untuk kebutuhan
-                                discovery RisenGrowth.
+                                pencarian RisenGrowth.
                             </p>
                         </div>
                     </div>
@@ -105,13 +104,13 @@
                                     <span
                                         class="rounded-full bg-emerald-50 px-3 py-1
                                  text-xs font-semibold text-emerald-700">
-                                        Connected
+                                        Terhubung
                                     </span>
                                 @else
                                     <span
                                         class="rounded-full bg-amber-50 px-3 py-1
                                  text-xs font-semibold text-amber-700">
-                                        Not connected
+                                        Belum terhubung
                                     </span>
                                 @endif
 
@@ -126,12 +125,12 @@
                                     </p>
 
                                     <p class="mt-1 text-xs text-slate-500">
-                                        Threads Account ID:
+                                        ID akun Threads:
                                         {{ $connectedThreads->external_account_id }}
                                     </p>
 
                                     <p class="mt-2 text-xs text-slate-500">
-                                        Token berlaku sampai:
+                                        Akses akun berlaku sampai:
                                         {{ $connectedThreads->token_expires_at?->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') ?? 'Tidak diketahui' }}
                                     </p>
 
@@ -146,7 +145,7 @@
                                         class="rounded-xl border border-rose-200
                                px-4 py-2.5 text-sm font-semibold
                                text-rose-700 hover:bg-rose-50">
-                                        Disconnect Threads
+                                        Putuskan koneksi Threads
                                     </button>
                                 </form>
                             @else
