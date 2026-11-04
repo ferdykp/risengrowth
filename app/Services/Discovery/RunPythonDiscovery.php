@@ -60,6 +60,7 @@ class RunPythonDiscovery
                 config('services.risengrowth_python.bin'), config('services.scrapling.script'),
                 '--keyword', $keyword->phrase, '--mode', (string) config('services.scrapling.mode'),
                 '--timeout', (string) config('services.scrapling.timeout'), '--max-posts', (string) config('services.scrapling.max_posts'),
+                '--scrolls', (string) config('services.scrapling.scrolls'),
             ] : [
                 config('services.risengrowth_python.bin'), config('services.risengrowth_python.script'),
                 '--keyword', $keyword->phrase, '--config', config('services.risengrowth_python.sources'),
