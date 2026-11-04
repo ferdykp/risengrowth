@@ -40,6 +40,9 @@ class DiscoveryRunController extends Controller
         $data = $request->validate([
             'existing_run_id' => ['nullable', 'string', 'regex:/\A[a-zA-Z0-9]{1,64}\z/'],
             'source' => ['nullable', Rule::in(['python', 'threads', 'apify', 'scrapling'])],
+            'posted_from' => ['exclude_unless:source,scrapling', 'nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Jakarta')->toDateString()],
+            'posted_to' => ['exclude_unless:source,scrapling', 'nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Jakarta')->toDateString(),
+                Rule::when($request->filled('posted_from'), 'after_or_equal:posted_from')],
             'keyword_id' => [
                 'required',
                 'integer',
@@ -93,7 +96,7 @@ class DiscoveryRunController extends Controller
         }
 
         if (($data['source'] ?? 'threads') === 'scrapling') {
-            RunPythonDiscoveryJob::dispatch($keyword->id, 'scrapling');
+            RunPythonDiscoveryJob::dispatch($keyword->id, 'scrapling', $data['posted_from'] ?? null, $data['posted_to'] ?? null);
             $message = 'Discovery Threads via Scrapling masuk antrean. Threads dapat meminta login atau memblokir akses; hasilnya tercatat di riwayat.';
 
             if ($request->expectsJson()) {

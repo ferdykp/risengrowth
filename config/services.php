@@ -92,5 +92,6 @@ return [
         'mode' => env('SCRAPLING_MODE', 'http'),
         'timeout' => (int) env('SCRAPLING_TIMEOUT', 20),
         'max_posts' => (int) env('SCRAPLING_MAX_POSTS', 20),
+        'max_post_age_days' => (int) env('SCRAPLING_MAX_POST_AGE_DAYS', 7),
     ],
 ];

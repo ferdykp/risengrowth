@@ -5,6 +5,7 @@ namespace App\Services\Discovery;
 use App\Models\DiscoveredPost;
 use App\Models\Lead;
 use App\Models\SocialAccount;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
@@ -19,10 +20,12 @@ class RunPythonDiscovery
 
     /**
      * Run a Python worker for one keyword: `python` (configured public web sources) or `scrapling` (Threads search).
+     * Scrapling keeps only posts dated within $postedFrom..$postedTo (Y-m-d, WIB); both default to the last
+     * `services.scrapling.max_post_age_days` days up to today.
      *
      * @return array{fetched: int, added: int, linked: int}
      */
-    public function execute(object $keyword, string $engine = 'python'): array
+    public function execute(object $keyword, string $engine = 'python', ?string $postedFrom = null, ?string $postedTo = null): array
     {
         $lock = Cache::lock($engine.'-discovery:'.$keyword->id, 120);
         if (! $lock->get()) {
@@ -30,23 +33,27 @@ class RunPythonDiscovery
         }
 
         try {
-            return $this->run($keyword, $engine);
+            return $this->run($keyword, $engine, $postedFrom, $postedTo);
         } finally {
             $lock->release();
         }
     }
 
     /** @return array{fetched: int, added: int, linked: int} */
-    private function run(object $keyword, string $engine): array
+    private function run(object $keyword, string $engine, ?string $postedFrom, ?string $postedTo): array
     {
+        $isScrapling = $engine === 'scrapling';
+        $today = now('Asia/Jakarta');
+        $from = $isScrapling ? Carbon::parse($postedFrom ?? $today->copy()->subDays((int) config('services.scrapling.max_post_age_days'))->toDateString(), 'Asia/Jakarta')->startOfDay() : null;
+        $to = $isScrapling ? Carbon::parse($postedTo ?? $today->toDateString(), 'Asia/Jakarta')->endOfDay() : null;
         $runId = DB::table('discovery_runs')->insertGetId([
             'social_account_id' => null, 'source_type' => $engine,
             'search_keyword_id' => $keyword->id, 'run_uuid' => (string) Str::uuid(),
+            'posted_from' => $from?->toDateString(), 'posted_to' => $to?->toDateString(),
             'status' => 'running', 'started_at' => now(), 'created_at' => now(), 'updated_at' => now(),
         ]);
 
         $failureSummary = null;
-        $isScrapling = $engine === 'scrapling';
 
         try {
             $result = Process::path(base_path())->timeout(90)->run($isScrapling ? [
@@ -83,7 +90,8 @@ class RunPythonDiscovery
                 $failureSummary = 'Semua sumber gagal: '.implode('; ', array_column($decoded['errors'], 'error'));
                 throw new RuntimeException('All configured discovery sources failed');
             }
-            $excludedOwn = 0;
+            $received = count($decoded['posts']);
+            $excludedOwn = $outOfRange = 0;
             if ($isScrapling) {
                 $ownUsernames = array_map(fn (string $name): string => strtolower(ltrim(trim($name), '@')), array_merge(
                     config('services.apify.excluded_usernames', []),
@@ -91,10 +99,13 @@ class RunPythonDiscovery
                 ));
                 $kept = array_filter($decoded['posts'], fn (array $entry): bool => ! in_array(strtolower((string) ($entry['username'] ?? '')), $ownUsernames, true));
                 $excludedOwn = count($decoded['posts']) - count($kept);
-                $decoded['posts'] = array_values($kept);
+                $inRange = array_filter($kept, fn (array $entry): bool => filled($entry['posted_at'] ?? null)
+                    && Carbon::parse($entry['posted_at'])->between($from, $to));
+                $outOfRange = count($kept) - count($inRange);
+                $decoded['posts'] = array_values($inRange);
             }
 
-            return DB::transaction(function () use ($decoded, $runId, $keyword, $isScrapling, $excludedOwn): array {
+            return DB::transaction(function () use ($decoded, $runId, $keyword, $isScrapling, $excludedOwn, $outOfRange, $received): array {
                 $added = 0;
                 $relevant = 0;
                 $linked = [];
@@ -134,14 +145,14 @@ class RunPythonDiscovery
                 ]);
                 DB::table('discovery_runs')->where('id', $runId)->update([
                     'status' => $decoded['errors'] ? 'partial' : 'completed',
-                    'fetched_count' => count($decoded['posts']), 'added_count' => $added, 'relevant_count' => $relevant,
-                    'excluded_own_count' => $excludedOwn,
+                    'fetched_count' => $received, 'added_count' => $added, 'relevant_count' => $relevant,
+                    'excluded_own_count' => $excludedOwn, 'out_of_range_count' => $outOfRange,
                     'error_code' => $decoded['errors'] ? 'SOURCE_PARTIAL' : null,
                     'error_summary' => $decoded['errors'] ? json_encode($decoded['errors'], JSON_UNESCAPED_UNICODE) : null,
                     'finished_at' => now(), 'updated_at' => now(),
                 ]);
 
-                return ['fetched' => count($decoded['posts']), 'added' => $added, 'linked' => count($linked)];
+                return ['fetched' => $received, 'added' => $added, 'linked' => count($linked)];
             });
         } catch (Throwable $exception) {
             DB::table('discovery_runs')->where('id', $runId)->update([

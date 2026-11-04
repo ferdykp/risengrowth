@@ -51,10 +51,19 @@ RISENGROWTH_PYTHON=/absolute/path/to/project/scraper/.venv/bin/python   # option
 SCRAPLING_MODE=http        # or browser
 SCRAPLING_TIMEOUT=20       # seconds per request
 SCRAPLING_MAX_POSTS=20     # per keyword
+SCRAPLING_MAX_POST_AGE_DAYS=7  # default date range: today minus N days to today (WIB)
 THREADS_EXCLUDED_USERNAMES=risencode.dev,risendev
 ```
 
 Keywords come from the existing **Kata Kunci** page. Each run searches one keyword.
+
+### Post date range
+
+- The form has **Tanggal posting dari / sampai** fields (WIB dates, used only for Scrapling). They default to the last `SCRAPLING_MAX_POST_AGE_DAYS` days (default `7`) up to today.
+- Posts dated outside the range are not stored. Posts with no date are dropped too.
+- Run history shows the range, how many posts fell outside it, and how many were your own accounts.
+- The dates filter what one search page returns. They are not sent to Threads. Threads search only returns a small batch of recent posts, so an old range will usually come back empty.
+- `growth:scan --engine=scrapling` always uses the default range.
 
 ## Install
 

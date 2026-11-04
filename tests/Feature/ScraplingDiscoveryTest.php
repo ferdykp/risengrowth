@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Jobs\RunApifyDiscoveryJob;
 use App\Jobs\RunPythonDiscoveryJob;
+use App\Models\DiscoveredPost;
 use App\Models\SearchKeyword;
 use App\Models\User;
 use App\Services\Discovery\RunPythonDiscovery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
@@ -28,11 +30,11 @@ class ScraplingDiscoveryTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function threadsPost(string $id, string $username, string $body): array
+    private function threadsPost(string $id, string $username, string $body, ?string $postedAt = '2026-10-26T07:33:20+00:00'): array
     {
         return ['platform' => 'threads', 'external_post_id' => $id, 'username' => $username, 'body' => $body,
             'permalink' => 'https://www.threads.com/@'.$username.'/post/C'.$id, 'source' => 'scrapling',
-            'posted_at' => '2026-10-26T07:33:20+00:00', 'keyword' => 'website', 'metrics' => ['likes' => 4]];
+            'posted_at' => $postedAt, 'keyword' => 'website', 'metrics' => ['likes' => 4]];
     }
 
     public function test_admin_queues_scrapling_discovery_without_apify_token(): void
@@ -42,11 +44,63 @@ class ScraplingDiscoveryTest extends TestCase
         $keyword = $this->keyword();
 
         $this->actingAs(User::findOrFail($keyword->user_id))
-            ->postJson(route('discovery.run'), ['keyword_id' => $keyword->id, 'source' => 'scrapling'])
+            ->postJson(route('discovery.run'), ['keyword_id' => $keyword->id, 'source' => 'scrapling',
+                'posted_from' => '2026-10-28', 'posted_to' => '2026-11-04'])
             ->assertStatus(202)->assertJson(['status' => 'queued', 'source' => 'scrapling']);
 
-        Bus::assertDispatched(RunPythonDiscoveryJob::class, fn ($job) => $job->keywordId === $keyword->id && $job->engine === 'scrapling' && $job->tries === 1);
+        Bus::assertDispatched(RunPythonDiscoveryJob::class, fn ($job) => $job->keywordId === $keyword->id && $job->engine === 'scrapling'
+            && $job->tries === 1 && $job->postedFrom === '2026-10-28' && $job->postedTo === '2026-11-04');
         Bus::assertNotDispatched(RunApifyDiscoveryJob::class);
+    }
+
+    public function test_rejects_reversed_or_future_scrapling_date_range_with_422(): void
+    {
+        Bus::fake([RunPythonDiscoveryJob::class]);
+        $this->travelTo(Carbon::parse('2026-11-04 10:00', 'Asia/Jakarta'));
+        $keyword = $this->keyword();
+        $admin = User::findOrFail($keyword->user_id);
+
+        $this->actingAs($admin)->postJson(route('discovery.run'), ['keyword_id' => $keyword->id, 'source' => 'scrapling',
+            'posted_from' => '2026-11-03', 'posted_to' => '2026-11-01'])->assertUnprocessable()->assertJsonValidationErrors('posted_to');
+        $this->actingAs($admin)->postJson(route('discovery.run'), ['keyword_id' => $keyword->id, 'source' => 'scrapling',
+            'posted_from' => '2026-11-05'])->assertUnprocessable()->assertJsonValidationErrors('posted_from');
+
+        Bus::assertNotDispatched(RunPythonDiscoveryJob::class);
+    }
+
+    public function test_default_range_keeps_only_posts_from_last_seven_days(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-04 10:00', 'Asia/Jakarta'));
+        $keyword = $this->keyword();
+        Process::fake(['*threads_scrapling.py*' => Process::result(output: json_encode(['posts' => [
+            $this->threadsPost('201', 'fresh', 'Need a website today', '2026-11-04T01:00:00+00:00'),
+            $this->threadsPost('202', 'edge', 'Need a website', '2026-10-27T17:00:00+00:00'),
+            $this->threadsPost('203', 'old', 'Need a website', '2026-10-27T16:59:59+00:00'),
+            $this->threadsPost('204', 'undated', 'Need a website', null),
+        ], 'errors' => [], 'sources_configured' => 1]))]);
+        Process::preventStrayProcesses();
+
+        app(RunPythonDiscovery::class)->execute($keyword, 'scrapling');
+
+        $this->assertSame(['201', '202'], DiscoveredPost::orderBy('external_post_id')->pluck('external_post_id')->all());
+        $this->assertDatabaseHas('discovery_runs', ['source_type' => 'scrapling', 'status' => 'completed', 'fetched_count' => 4,
+            'out_of_range_count' => 2, 'posted_from' => '2026-10-28', 'posted_to' => '2026-11-04']);
+    }
+
+    public function test_explicit_range_overrides_default(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-04 10:00', 'Asia/Jakarta'));
+        $keyword = $this->keyword();
+        Process::fake(['*threads_scrapling.py*' => Process::result(output: json_encode(['posts' => [
+            $this->threadsPost('301', 'today', 'Need a website', '2026-11-04T01:00:00+00:00'),
+            $this->threadsPost('302', 'older', 'Need a website', '2026-10-01T01:00:00+00:00'),
+        ], 'errors' => [], 'sources_configured' => 1]))]);
+        Process::preventStrayProcesses();
+
+        app(RunPythonDiscovery::class)->execute($keyword, 'scrapling', '2026-09-30', '2026-10-02');
+
+        $this->assertSame(['302'], DiscoveredPost::pluck('external_post_id')->all());
+        $this->assertDatabaseHas('discovery_runs', ['out_of_range_count' => 1, 'posted_from' => '2026-09-30', 'posted_to' => '2026-10-02']);
     }
 
     public function test_discovery_page_preselects_configured_engine(): void
@@ -64,6 +118,7 @@ class ScraplingDiscoveryTest extends TestCase
 
     public function test_scrapling_job_stores_threads_posts_excludes_own_account_and_deduplicates(): void
     {
+        $this->travelTo(Carbon::parse('2026-10-27 10:00', 'Asia/Jakarta'));
         $keyword = $this->keyword();
         config(['services.apify.excluded_usernames' => ['risendev']]);
         Process::fake(['*threads_scrapling.py*' => Process::result(output: json_encode(['posts' => [
@@ -80,7 +135,7 @@ class ScraplingDiscoveryTest extends TestCase
             'username' => 'buyer.one', 'permalink' => 'https://www.threads.com/@buyer.one/post/C101']);
         $this->assertDatabaseCount('leads', 1);
         $this->assertDatabaseHas('discovery_runs', ['source_type' => 'scrapling', 'status' => 'completed',
-            'fetched_count' => 1, 'excluded_own_count' => 1]);
+            'fetched_count' => 2, 'excluded_own_count' => 1]);
         $this->assertDatabaseHas('ai_analyses', ['output->source' => 'scrapling']);
         Process::assertRan(fn ($process) => $process->command === [
             config('services.risengrowth_python.bin'), base_path('scraper/threads_scrapling.py'),

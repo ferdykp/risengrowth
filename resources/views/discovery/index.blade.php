@@ -196,6 +196,18 @@
                     </div>
 
                     <div>
+                        <label for="posted-from" class="rg-field-label">Tanggal posting dari (Scrapling)</label>
+                        <input id="posted-from" name="posted_from" type="date" max="{{ now('Asia/Jakarta')->toDateString() }}"
+                            value="{{ old('posted_from', now('Asia/Jakarta')->subDays((int) config('services.scrapling.max_post_age_days'))->toDateString()) }}"
+                            class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                    </div>
+                    <div>
+                        <label for="posted-to" class="rg-field-label">sampai</label>
+                        <input id="posted-to" name="posted_to" type="date" max="{{ now('Asia/Jakarta')->toDateString() }}" value="{{ old('posted_to', now('Asia/Jakarta')->toDateString()) }}"
+                            class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                    </div>
+
+                    <div>
                         <label for="existing-apify-run" class="rg-field-label">ID run lama (opsional)</label>
                         <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="Kosongkan untuk pencarian baru" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
                     </div>

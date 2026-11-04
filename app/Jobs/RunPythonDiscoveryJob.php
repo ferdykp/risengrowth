@@ -20,8 +20,12 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 110;
 
-    public function __construct(public int $keywordId, public string $engine = 'python')
-    {
+    public function __construct(
+        public int $keywordId,
+        public string $engine = 'python',
+        public ?string $postedFrom = null,
+        public ?string $postedTo = null,
+    ) {
         if ($engine === 'scrapling') {
             $this->tries = 1;
         }
@@ -37,7 +41,7 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
         $keyword = DB::table('search_keywords')->where('id', $this->keywordId)
             ->where('enabled', true)->whereNull('deleted_at')->first();
         if ($keyword) {
-            $discovery->execute($keyword, $this->engine);
+            $discovery->execute($keyword, $this->engine, $this->postedFrom, $this->postedTo);
         }
     }
 }
