@@ -144,6 +144,18 @@ class ScraplingDiscoveryTest extends TestCase
         ]);
     }
 
+    public function test_job_queued_before_engine_and_date_fields_existed_still_runs(): void
+    {
+        $keyword = $this->keyword();
+        Process::fake(['*main.py*' => Process::result(output: json_encode(['posts' => [], 'errors' => [], 'sources_configured' => 1]))]);
+        Process::preventStrayProcesses();
+        $legacyPayload = 'O:30:"App\Jobs\RunPythonDiscoveryJob":1:{s:9:"keywordId";i:'.$keyword->id.';}';
+
+        unserialize($legacyPayload)->handle(app(RunPythonDiscovery::class));
+
+        $this->assertDatabaseHas('discovery_runs', ['source_type' => 'python', 'status' => 'completed']);
+    }
+
     public function test_job_is_released_until_scrapling_cooldown_ends(): void
     {
         $this->freezeTime();

@@ -23,12 +23,20 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
 
     public ?int $maxExceptions = null;
 
-    public function __construct(
-        public int $keywordId,
-        public string $engine = 'python',
-        public ?string $postedFrom = null,
-        public ?string $postedTo = null,
-    ) {
+    /**
+     * Declared with defaults (not promoted) so jobs queued before these fields existed still unserialize.
+     */
+    public string $engine = 'python';
+
+    public ?string $postedFrom = null;
+
+    public ?string $postedTo = null;
+
+    public function __construct(public int $keywordId, string $engine = 'python', ?string $postedFrom = null, ?string $postedTo = null)
+    {
+        $this->engine = $engine;
+        $this->postedFrom = $postedFrom;
+        $this->postedTo = $postedTo;
         if ($engine === 'scrapling') {
             // Releases while waiting for the Threads cooldown count as attempts; a real failure is never retried.
             $this->tries = 30;
