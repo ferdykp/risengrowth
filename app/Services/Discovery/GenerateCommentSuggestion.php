@@ -35,7 +35,9 @@ class GenerateCommentSuggestion
             } catch (Throwable) {
                 Log::warning('Quick comment AI connection failed', ['provider' => 'groq']);
             }
-        } elseif (in_array($provider, ['auto', 'ollama'], true) && $this->localAi->enabled()) {
+        }
+
+        if (in_array($provider, ['auto', 'ollama'], true) && $this->localAi->enabled()) {
             $body = $this->localAi->draft($post, 'id', $tone, $instructions.' Return JSON with only a body string under 450 characters.');
             if ($this->valid($body, $canBrand, $purpose, $post)) {
                 return ['body' => $body, 'provider' => 'ollama'];

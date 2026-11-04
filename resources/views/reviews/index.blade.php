@@ -32,8 +32,11 @@
                                     <p class="text-xs text-slate-500 mt-1">{{ $draft->lead?->post?->platform ?? 'Platform tidak tersedia' }} · {{ $draft->created_at?->diffForHumans() }}</p></div>
                                 <span class="text-xs font-semibold px-2.5 py-1.5 rounded-full {{ $draft->status==='approved'?'bg-green-50 text-green-700':($draft->status==='rejected'?'bg-red-50 text-red-700':($draft->status==='pending_review'?'bg-amber-50 text-amber-700':'bg-slate-100 text-slate-700')) }}">{{ ['draft'=>'Draf','pending_review'=>'Menunggu tinjauan','approved'=>'Disetujui','rejected'=>'Ditolak'][$draft->status] ?? $draft->status }}</span>
                             </div>
-                            <div class="rounded-xl bg-slate-50 border border-slate-100 p-4"><p class="text-[11px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Postingan asli</p><p class="text-sm leading-relaxed text-slate-600 whitespace-pre-line">{{ $draft->lead?->post?->body ?: 'Teks postingan tidak tersedia' }}</p>
-                                @if($draft->lead?->post?->permalink)<a class="inline-block text-xs text-blue-700 mt-2 hover:underline" target="_blank" rel="noopener noreferrer" href="{{ $draft->lead->post->permalink }}">Lihat postingan asli ↗</a>@endif</div>
+                            <details class="rounded-xl bg-slate-50 border border-slate-100 p-4">
+                                <summary class="cursor-pointer text-sm font-semibold text-slate-600">Lihat postingan asli</summary>
+                                <p class="mt-3 text-sm leading-relaxed text-slate-600 whitespace-pre-line">{{ $draft->lead?->post?->body ?: 'Teks postingan tidak tersedia' }}</p>
+                                @if($draft->lead?->post?->permalink)<a class="inline-block text-xs text-blue-700 mt-2 hover:underline" target="_blank" rel="noopener noreferrer" href="{{ $draft->lead->post->permalink }}">Buka postingan di Threads ↗</a>@endif
+                            </details>
                             @if(in_array($draft->status, ['draft','pending_review'], true))
                                 <form action="{{ route('reviews.update', $draft) }}" method="POST" class="space-y-3">@csrf @method('PATCH')
                                     <label for="body-{{ $draft->id }}" class="text-xs font-semibold text-slate-500">Balasan (boleh diedit sebelum keputusan)</label>

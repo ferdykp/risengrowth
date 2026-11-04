@@ -25,7 +25,10 @@
                     </select>
                     <p class="mt-2 text-xs text-slate-500">DM dibuat sebagai pembuka percakapan, bukan menyalin komentar publik. Salin hasilnya, buka profil, lalu kirim sendiri di Threads jika penerima mengizinkan pesan.</p>
                 </div>
-                <div>
+                <details class="rounded-xl border border-slate-200 px-4 py-3">
+                    <summary class="cursor-pointer text-sm font-semibold text-slate-700">Pengaturan tambahan</summary>
+                    <div class="mt-4 space-y-4">
+                    <div>
                     <label for="quick-tone" class="rg-field-label">Gaya bahasa</label>
                     <select id="quick-tone" name="tone" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
                         <option value="casual" @selected(old('tone', 'casual') === 'casual')>Casual & Friendly — santai dan ramah</option>
@@ -35,24 +38,27 @@
                         <option value="direct" @selected(old('tone') === 'direct')>To the point — singkat dan jelas</option>
                         <option value="playful" @selected(old('tone') === 'playful')>Ringan — sedikit jenaka bila cocok</option>
                     </select>
-                </div>
+                    </div>
                 <label class="flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
                     <input type="hidden" name="allow_brand" value="0">
                     <input type="checkbox" name="allow_brand" value="1" class="mt-1" @checked((bool) old('allow_brand', true))>
                     <span>Boleh menyebut {{ config('services.comment_brand.mention') }} atau {{ config('services.comment_brand.website') }} bila relevan.<span class="mt-1 block text-xs text-slate-500">Tidak dipaksakan. Untuk diskusi umum dan promosi orang lain, balasan tetap tanpa promosi.</span></span>
                 </label>
+                    </div>
+                </details>
                 <button type="submit" class="w-full rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white">Buat draft balasan</button>
-                <p class="text-xs text-slate-500">{{ $aiConfigured ? 'Teks postingan akan diproses oleh provider AI yang dikonfigurasi.' : 'AI belum dikonfigurasi. Saran template gratis tetap tersedia.' }} Komentar dan DM bisa diedit dan disalin; tidak dikirim otomatis.</p>
+                <p class="text-xs text-slate-500">{{ $aiConfigured ? 'AI akan mencoba membuat balasan yang sesuai. Jika layanan sedang bermasalah, template tetap disediakan.' : 'Template gratis tetap tersedia saat AI belum dikonfigurasi.' }} Komentar dan DM bisa diedit dan disalin; tidak dikirim otomatis.</p>
             </form>
         </section>
         <section class="space-y-4" aria-label="Hasil komentar cepat">
             <div><h2 class="text-lg font-bold">Draft balasan kamu</h2><p class="mt-1 text-sm text-slate-500">Riwayat ini hanya terlihat oleh akunmu. Baca dulu, sesuaikan, lalu salin ke Threads.</p></div>
             @forelse($suggestions as $suggestion)
-                <article class="rg-panel rounded-2xl border border-slate-200 bg-white space-y-4">
+                <article class="rg-panel rounded-2xl border border-slate-200 bg-white space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $suggestion->provider === 'template' ? 'Template gratis' : 'Saran AI' }} · {{ $suggestion->purpose === 'dm' ? 'DM pribadi' : 'Komentar' }} · {{ ucfirst($suggestion->tone) }}</span>
                         <span class="text-xs text-slate-400">{{ \Illuminate\Support\Carbon::parse($suggestion->created_at, 'UTC')->copy()->timezone('Asia/Jakarta')->format('d M, H:i \W\I\B') }}</span>
                     </div>
+                    <p class="text-sm leading-relaxed text-slate-700">{{ \Illuminate\Support\Str::limit(preg_replace('/\s+/u', ' ', $suggestion->body), 190) }}</p>
                     <details class="text-sm"><summary class="cursor-pointer font-semibold text-slate-600">Lihat postingan asal</summary><p class="mt-3 whitespace-pre-wrap break-words text-slate-600">{{ $suggestion->post_text }}</p></details>
                     <div class="flex flex-wrap gap-x-4 gap-y-2">
                     @if($suggestion->post_url)<a href="{{ $suggestion->post_url }}" target="_blank" rel="noopener noreferrer" class="inline-block text-sm font-semibold text-blue-700 underline">Buka postingan di Threads ↗</a>@endif
@@ -60,21 +66,30 @@
                         <a href="{{ 'https://www.threads.com/@'.$profileMatch[1] }}" target="_blank" rel="noopener noreferrer" class="inline-block text-sm font-semibold text-blue-700 underline">Buka profil penulis untuk DM ↗</a>
                     @endif
                     </div>
-                    <form method="POST" action="{{ route('comments.suggestions.update', $suggestion->id, false) }}" class="space-y-3">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="button" data-copy-target="suggestion-{{ $suggestion->id }}" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">{{ $suggestion->purpose === 'dm' ? 'Salin pesan pribadi' : 'Salin komentar' }}</button>
+                        <details class="text-sm">
+                            <summary class="cursor-pointer font-semibold text-blue-700">Edit teks</summary>
+                    <form method="POST" action="{{ route('comments.suggestions.update', $suggestion->id, false) }}" class="mt-3 space-y-3">
                         @csrf @method('PATCH')
                         <label for="suggestion-{{ $suggestion->id }}" class="rg-field-label">{{ $suggestion->purpose === 'dm' ? 'Pesan pribadi (boleh diedit)' : 'Komentar (boleh diedit)' }}</label>
                         <textarea id="suggestion-{{ $suggestion->id }}" name="body" rows="4" required minlength="10" maxlength="2000" class="w-full rounded-xl border border-slate-200 p-3 text-sm">{{ $suggestion->body }}</textarea>
                         <div class="flex flex-wrap gap-3">
-                            <button type="button" data-copy-target="suggestion-{{ $suggestion->id }}" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">{{ $suggestion->purpose === 'dm' ? 'Salin pesan pribadi' : 'Salin komentar' }}</button>
                             <button type="submit" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">Simpan edit</button>
                         </div>
                     </form>
+                        </details>
+                    </div>
                     @if($suggestion->replied_at)
                         <p class="text-xs text-emerald-700" role="status">Sudah dibalas · dikonfirmasi manual</p>
                     @else
-                        <form method="POST" action="{{ route('comments.suggestions.replied', $suggestion->id) }}" class="space-y-3 border-t pt-3">@csrf
-                        <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="confirm_replied" value="1" required><span>Saya sudah mengirim balasan ini sendiri.</span></label>
-                        <button class="rg-action">Tandai sudah dibalas</button></form>
+                        <details class="border-t pt-3 text-sm">
+                            <summary class="cursor-pointer font-semibold text-slate-600">Tandai sudah dibalas</summary>
+                            <form method="POST" action="{{ route('comments.suggestions.replied', $suggestion->id) }}" class="mt-3 flex flex-wrap items-center gap-3">@csrf
+                                <label class="flex items-start gap-2"><input type="checkbox" name="confirm_replied" value="1" required><span>Saya sudah mengirim balasan ini sendiri.</span></label>
+                                <button class="rg-action">Konfirmasi</button>
+                            </form>
+                        </details>
                     @endif
                 </article>
             @empty
@@ -93,7 +108,7 @@ document.getElementById('quick-comment-form')?.addEventListener('submit', event 
 document.querySelectorAll('[data-copy-target]').forEach(button => button.addEventListener('click', async () => {
     const input = document.getElementById(button.dataset.copyTarget);
     try { await navigator.clipboard.writeText(input.value); button.textContent = 'Tersalin ✓'; }
-    catch (_) { input.focus(); input.select(); button.textContent = 'Pilih teks lalu salin manual'; }
+    catch (_) { const editor = input.closest('details'); if (editor) editor.open = true; input.focus(); input.select(); button.textContent = 'Pilih teks lalu salin manual'; }
 }));
 </script>
 @endpush

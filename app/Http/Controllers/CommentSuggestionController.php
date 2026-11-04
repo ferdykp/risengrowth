@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Discovery\GenerateCommentSuggestion;
+use App\Services\Discovery\LocalAiAssistant;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,14 +39,16 @@ class CommentSuggestionController extends Controller
             'purpose' => $data['purpose'] ?? 'comment', 'tone' => $data['tone'], 'provider' => $result['provider'], 'body' => $result['body'], 'created_at' => now(), 'updated_at' => now(),
         ]);
 
+        $aiConfigured = filled(config('services.groq.key')) || app(LocalAiAssistant::class)->enabled();
+
         if (($data['purpose'] ?? 'comment') === 'dm') {
             return redirect()->to(route('comments.index', [], false).'#quick-comments')->withInput($data)->with('success', $result['provider'] === 'template'
-                ? 'Draft DM template siap. AI belum tersedia; edit dulu lalu salin dan kirim sendiri melalui Threads.'
+                ? ($aiConfigured ? 'AI gagal memberi hasil kali ini. Template cadangan siap; edit dulu lalu salin dan kirim sendiri melalui Threads.' : 'AI belum aktif karena provider belum dikonfigurasi. Template gratis siap; edit dulu lalu salin dan kirim sendiri melalui Threads.')
                 : 'Draft DM siap. Review, salin, lalu buka profil penulis dan kirim sendiri melalui Threads.');
         }
 
         return redirect()->to(route('comments.index', [], false).'#quick-comments')->withInput($data)->with('success', $result['provider'] === 'template'
-            ? 'Saran template siap. AI belum tersedia; edit sesuai postingan lalu salin ke Threads.'
+            ? ($aiConfigured ? 'AI gagal memberi hasil kali ini. Template cadangan siap; edit sesuai postingan lalu salin ke Threads.' : 'AI belum aktif karena provider belum dikonfigurasi. Template gratis siap; edit sesuai postingan lalu salin ke Threads.')
             : 'Saran komentar siap. Baca dan edit dulu, lalu salin ke Threads.');
     }
 

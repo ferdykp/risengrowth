@@ -46,7 +46,7 @@ class CommentSuggestionTest extends TestCase
         $this->assertDatabaseCount('discovered_posts', 0);
         $this->assertDatabaseCount('comment_drafts', 0);
         $this->assertDatabaseCount('engagement_attempts', 0);
-        $this->get(route('comments.index'))->assertOk()->assertSee('Komentar (boleh diedit)')->assertSee('Salin komentar')->assertSee('Template gratis');
+        $this->get(route('comments.index'))->assertOk()->assertSee('Edit teks')->assertSee('Salin komentar')->assertSee('Template gratis');
         Http::assertNothingSent();
     }
 
@@ -76,10 +76,30 @@ class CommentSuggestionTest extends TestCase
         Http::fake(['api.groq.com/*' => Http::response([], $status)]);
 
         $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload())
-            ->assertRedirect()->assertSessionHas('success', 'Saran template siap. AI belum tersedia; edit sesuai postingan lalu salin ke Threads.');
+            ->assertRedirect()->assertSessionHas('success', 'AI gagal memberi hasil kali ini. Template cadangan siap; edit sesuai postingan lalu salin ke Threads.');
 
         $this->assertDatabaseHas('comment_suggestions', ['provider' => 'template']);
         Http::assertSentCount(1);
+    }
+
+    public function test_quick_suggestion_uses_local_ai_when_groq_is_unavailable(): void
+    {
+        config()->set([
+            'services.groq.key' => 'test-private-key',
+            'services.ollama.enabled' => true,
+            'services.ollama.model' => 'test-model',
+            'services.ollama.url' => 'http://127.0.0.1:11434',
+        ]);
+        $comment = 'Untuk katalog simpel, tombol WhatsApp bisa memudahkan pelanggan bertanya. Produknya ada berapa?';
+        Http::fake([
+            'api.groq.com/*' => Http::response([], 503),
+            '127.0.0.1:11434/*' => Http::response(['done' => true, 'message' => ['content' => json_encode(['body' => $comment])]]),
+        ]);
+
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload())->assertRedirect();
+
+        $this->assertDatabaseHas('comment_suggestions', ['provider' => 'ollama', 'body' => $comment]);
+        Http::assertSentCount(2);
     }
 
     public function test_seller_post_does_not_get_a_template_assuming_the_author_needs_a_website(): void
