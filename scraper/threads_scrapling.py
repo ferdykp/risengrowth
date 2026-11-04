@@ -26,52 +26,14 @@ class ScrapeError(Exception):
     """Expected failure reported per keyword, e.g. LOGIN_WALL or HTTP_429."""
 
 
-def fetch(url, mode, timeout, scrolls=0):
-    """HTTP fetch by default; browser rendering only when explicitly configured.
-
-    Returns (page, extra_json_texts). In browser mode the page is scrolled `scrolls` times and the
-    JSON bodies the page itself loads while scrolling are returned, since later posts arrive that way.
-    """
-    if mode != "browser":
-        from scrapling.fetchers import Fetcher
-        return Fetcher.get(url, timeout=timeout, follow_redirects=False, retries=1), []
-    from scrapling.fetchers import StealthyFetcher
-    responses, texts = [], []
-
-    def setup(page):
-        page.on("response", lambda r: responses.append(r)
-                if "json" in (r.headers.get("content-type") or "") or r.request.method == "POST" else None)
-
-    def scroll(page):
-        for _ in range(scrolls):
-            page.mouse.wheel(0, 4000)
-            page.wait_for_timeout(random.randint(1500, 3000))
-        for response in responses:
-            try:
-                texts.append(response.text())
-            except Exception:  # body gone or not text
-                continue
-
-    page = StealthyFetcher.fetch(url, headless=True, network_idle=True, timeout=int(timeout * 1000),
-                                 solve_cloudflare=False, block_webrtc=True, page_setup=setup, page_action=scroll)
-    return page, texts
-
-
-def parse_json_texts(text):
-    """Yield JSON values from a response body: plain JSON, a guarded prefix like `for (;;);`, or JSON lines."""
-    start = min((i for i in (text.find("{"), text.find("[")) if i >= 0), default=-1)
-    if start < 0:
-        return
-    try:
-        yield json.loads(text[start:])
-        return
-    except ValueError:
-        pass
-    for line in text[start:].splitlines():
-        try:
-            yield json.loads(line)
-        except ValueError:
-            continue
+def fetch(url, mode, timeout):
+    """HTTP fetch by default; browser rendering only when explicitly configured."""
+    if mode == "browser":
+        from scrapling.fetchers import StealthyFetcher
+        return StealthyFetcher.fetch(url, headless=True, network_idle=True, timeout=int(timeout * 1000),
+                                     solve_cloudflare=False, block_webrtc=True)
+    from scrapling.fetchers import Fetcher
+    return Fetcher.get(url, timeout=timeout, follow_redirects=False, retries=1)
 
 
 def iter_post_objects(node):
@@ -109,15 +71,18 @@ def normalize(raw, keyword):
     }
 
 
-def extract(page, keyword, extra_texts=()):
-    """Parse posts from the JSON Threads embeds in the HTML, plus JSON loaded while scrolling."""
+def extract(page, keyword):
+    """Parse posts from the JSON blobs Threads embeds in server-rendered HTML."""
     posts = {}
-    for blob in [*page.css('script[type="application/json"]::text').getall(), *extra_texts]:
-        for data in parse_json_texts(blob):
-            for raw in iter_post_objects(data):
-                post = normalize(raw, keyword)
-                if post:
-                    posts.setdefault(post["external_post_id"], post)
+    for blob in page.css('script[type="application/json"]::text').getall():
+        try:
+            data = json.loads(blob)
+        except ValueError:
+            continue
+        for raw in iter_post_objects(data):
+            post = normalize(raw, keyword)
+            if post:
+                posts.setdefault(post["external_post_id"], post)
     return list(posts.values())
 
 
@@ -126,9 +91,9 @@ def is_login_wall(page):
             or bool(LOGIN_TEXT.search(" ".join(page.css("body ::text").getall()))))
 
 
-def search(keyword, mode="http", timeout=20, scrolls=0):
+def search(keyword, mode="http", timeout=20):
     try:
-        page, extra_texts = fetch(SEARCH_URL.format(quote(keyword)), mode, timeout, scrolls)
+        page = fetch(SEARCH_URL.format(quote(keyword)), mode, timeout)
     except Exception as exc:  # curl / browser transport errors
         raise ScrapeError("NETWORK_ERROR: " + type(exc).__name__) from exc
     if 300 <= page.status < 400:
@@ -136,13 +101,13 @@ def search(keyword, mode="http", timeout=20, scrolls=0):
         raise ScrapeError("LOGIN_WALL" if "login" in location.lower() else f"HTTP_{page.status}_REDIRECT")
     if page.status >= 400:
         raise ScrapeError(f"HTTP_{page.status}")
-    posts = extract(page, keyword, extra_texts)
+    posts = extract(page, keyword)
     if not posts and is_login_wall(page):
         raise ScrapeError("LOGIN_WALL")
     return posts
 
 
-def run(keywords, mode="http", timeout=20, max_posts=20, delay=15.0, searcher=search, scrolls=0):
+def run(keywords, mode="http", timeout=20, max_posts=20, delay=15.0, searcher=search):
     """Search each keyword, keep partial results when one fails, deduplicate by Threads post ID.
 
     Waits delay..1.5*delay seconds (random jitter) between keywords to lower the chance of a login wall.
@@ -152,7 +117,7 @@ def run(keywords, mode="http", timeout=20, max_posts=20, delay=15.0, searcher=se
         if index:
             time.sleep(delay + random.uniform(0, delay / 2))
         try:
-            for post in searcher(keyword, mode, timeout, scrolls)[:max_posts]:
+            for post in searcher(keyword, mode, timeout)[:max_posts]:
                 posts.setdefault(post["external_post_id"], post)
         except ScrapeError as exc:
             errors.append({"source": "scrapling", "error": f"{keyword[:60]}: {exc}"[:200]})
@@ -168,15 +133,13 @@ def main():
     parser.add_argument("--mode", choices=["http", "browser"], default="http")
     parser.add_argument("--timeout", type=float, default=20)
     parser.add_argument("--max-posts", type=int, default=20)
-    parser.add_argument("--scrolls", type=int, default=0, help="Browser mode only: times to scroll for more posts (0-15)")
     parser.add_argument("--delay", type=float, default=15.0, help="Seconds between keywords, plus up to 50%% jitter")
     args = parser.parse_args()
     keywords = [k.strip() for k in args.keyword]
     if any(not k or len(k) > 191 for k in keywords):
         parser.error("keyword must be 1..191 characters")
     result = run(keywords, args.mode, max(5.0, min(args.timeout, 60.0)),
-                 max(1, min(args.max_posts, 100)), max(1.0, min(args.delay, 120.0)),
-                 scrolls=max(0, min(args.scrolls, 15)))
+                 max(1, min(args.max_posts, 100)), max(1.0, min(args.delay, 120.0)))
     print(json.dumps(result, ensure_ascii=False))
     return 0 if not result["errors"] else 2
 

@@ -140,7 +140,7 @@ class ScraplingDiscoveryTest extends TestCase
         $this->assertDatabaseHas('ai_analyses', ['output->source' => 'scrapling']);
         Process::assertRan(fn ($process) => $process->command === [
             config('services.risengrowth_python.bin'), base_path('scraper/threads_scrapling.py'),
-            '--keyword', 'website', '--mode', 'http', '--timeout', '20', '--max-posts', '20', '--scrolls', '5',
+            '--keyword', 'website', '--mode', 'http', '--timeout', '20', '--max-posts', '20',
         ]);
     }
 
