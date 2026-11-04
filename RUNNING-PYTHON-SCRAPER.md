@@ -2,6 +2,8 @@
 
 The website now uses **Threads via Apify** by default. The verified Actor is `openclawai/threads-scraper`, using `search_latest`, maximum 10 posts per run. Official Threads API and the optional Python public-web adapters remain selectable.
 
+Experimental alternative: Threads keyword discovery with Scrapling (no Apify token). See `SCRAPLING-ENGINE.md`.
+
 ## Deploy the web workflow to Ubuntu
 
 Keep the existing `.env`, `APP_KEY`, database, and leads. Back up the database before migrations. Use the PHP version required by the committed Composer lockfile (`composer check-platform-reqs`); do not update dependencies on the server to bypass requirements.

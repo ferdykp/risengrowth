@@ -20,11 +20,16 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 110;
 
-    public function __construct(public int $keywordId) {}
+    public function __construct(public int $keywordId, public string $engine = 'python')
+    {
+        if ($engine === 'scrapling') {
+            $this->tries = 1;
+        }
+    }
 
     public function uniqueId(): string
     {
-        return (string) $this->keywordId;
+        return $this->engine.':'.$this->keywordId;
     }
 
     public function handle(RunPythonDiscovery $discovery): void
@@ -32,7 +37,7 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
         $keyword = DB::table('search_keywords')->where('id', $this->keywordId)
             ->where('enabled', true)->whereNull('deleted_at')->first();
         if ($keyword) {
-            $discovery->execute($keyword);
+            $discovery->execute($keyword, $this->engine);
         }
     }
 }

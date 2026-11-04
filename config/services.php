@@ -82,4 +82,15 @@ return [
         'script' => base_path('scraper/main.py'),
         'bin' => env('RISENGROWTH_PYTHON', base_path('scraper/.venv/bin/python')),
     ],
+
+    'scraper' => [
+        'engine' => env('SCRAPER_ENGINE', 'apify'),
+    ],
+
+    'scrapling' => [
+        'script' => base_path('scraper/threads_scrapling.py'),
+        'mode' => env('SCRAPLING_MODE', 'http'),
+        'timeout' => (int) env('SCRAPLING_TIMEOUT', 20),
+        'max_posts' => (int) env('SCRAPLING_MAX_POSTS', 20),
+    ],
 ];

@@ -22,7 +22,7 @@ class DiscoveryController extends Controller
             'keyword' => ['nullable', 'integer', 'min:1'],
             'after_id' => ['nullable', 'integer', 'min:0'],
             'track_keyword' => ['nullable', 'integer', 'min:1'],
-            'track_source' => ['nullable', Rule::in(['threads', 'python', 'apify'])],
+            'track_source' => ['nullable', Rule::in(['threads', 'python', 'apify', 'scrapling'])],
             'track_run' => ['nullable', 'integer', 'min:1'],
             'category' => ['nullable', Rule::in(['business', 'community', 'not_relevant'])],
             'qualification' => ['nullable', Rule::in(['qualified', 'uncertain', 'rejected'])],

@@ -10,12 +10,18 @@ use Illuminate\Support\Facades\DB;
 
 class RunPythonDiscoveryCommand extends Command
 {
-    protected $signature = 'growth:scan {--keyword= : Optional keyword ID} {--now : Run synchronously for testing}';
+    protected $signature = 'growth:scan {--keyword= : Optional keyword ID} {--now : Run synchronously for testing} {--engine=python : python (configured web sources) or scrapling (Threads search)}';
 
     protected $description = 'Run configured self-hosted Python discovery sources';
 
     public function handle(): int
     {
+        $engine = (string) $this->option('engine');
+        if (! in_array($engine, ['python', 'scrapling'], true)) {
+            $this->error('Engine must be python or scrapling.');
+
+            return self::INVALID;
+        }
         $query = DB::table('search_keywords')->where('enabled', true)->whereNull('deleted_at');
         if ($this->option('keyword')) {
             $query->where('id', (int) $this->option('keyword'));
@@ -26,9 +32,9 @@ class RunPythonDiscoveryCommand extends Command
             ->take(50);
         foreach ($keywords as $keyword) {
             if ($this->option('now')) {
-                app(RunPythonDiscovery::class)->execute($keyword);
+                app(RunPythonDiscovery::class)->execute($keyword, $engine);
             } else {
-                RunPythonDiscoveryJob::dispatch($keyword->id);
+                RunPythonDiscoveryJob::dispatch($keyword->id, $engine);
             }
         }
         $this->info('Processed/dispatched '.$keywords->count().' keyword(s).');

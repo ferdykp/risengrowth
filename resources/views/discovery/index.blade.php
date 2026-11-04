@@ -165,7 +165,8 @@
                     <div>
                         <label for="run-source" class="rg-field-label">Sumber discovery</label>
                         <select id="run-source" name="source" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
-                            <option value="apify" @selected(old('source', 'apify') === 'apify')>Threads via Apify</option>
+                            <option value="apify" @selected(old('source', config('services.scraper.engine')) === 'apify')>Threads via Apify</option>
+                            <option value="scrapling" @selected(old('source', config('services.scraper.engine')) === 'scrapling')>Threads via Scrapling (eksperimen)</option>
                             <option value="threads" @selected(old('source') === 'threads')>Threads API resmi</option>
                             <option value="python" @selected(old('source') === 'python')>Public web / API (Python)</option>
                         </select>
