@@ -8,6 +8,7 @@ as errors; they are never bypassed. No credentials, cookies or private APIs are 
 import argparse
 import json
 import logging
+import random
 import re
 import sys
 import time
@@ -106,12 +107,15 @@ def search(keyword, mode="http", timeout=20):
     return posts
 
 
-def run(keywords, mode="http", timeout=20, max_posts=20, delay=2.0, searcher=search):
-    """Search each keyword, keep partial results when one fails, deduplicate by Threads post ID."""
+def run(keywords, mode="http", timeout=20, max_posts=20, delay=15.0, searcher=search):
+    """Search each keyword, keep partial results when one fails, deduplicate by Threads post ID.
+
+    Waits delay..1.5*delay seconds (random jitter) between keywords to lower the chance of a login wall.
+    """
     posts, errors = {}, []
     for index, keyword in enumerate(keywords):
         if index:
-            time.sleep(delay)
+            time.sleep(delay + random.uniform(0, delay / 2))
         try:
             for post in searcher(keyword, mode, timeout)[:max_posts]:
                 posts.setdefault(post["external_post_id"], post)
@@ -129,13 +133,13 @@ def main():
     parser.add_argument("--mode", choices=["http", "browser"], default="http")
     parser.add_argument("--timeout", type=float, default=20)
     parser.add_argument("--max-posts", type=int, default=20)
-    parser.add_argument("--delay", type=float, default=2.0)
+    parser.add_argument("--delay", type=float, default=15.0, help="Seconds between keywords, plus up to 50%% jitter")
     args = parser.parse_args()
     keywords = [k.strip() for k in args.keyword]
     if any(not k or len(k) > 191 for k in keywords):
         parser.error("keyword must be 1..191 characters")
     result = run(keywords, args.mode, max(5.0, min(args.timeout, 60.0)),
-                 max(1, min(args.max_posts, 100)), max(1.0, min(args.delay, 30.0)))
+                 max(1, min(args.max_posts, 100)), max(1.0, min(args.delay, 120.0)))
     print(json.dumps(result, ensure_ascii=False))
     return 0 if not result["errors"] else 2
 

@@ -93,5 +93,7 @@ return [
         'timeout' => (int) env('SCRAPLING_TIMEOUT', 20),
         'max_posts' => (int) env('SCRAPLING_MAX_POSTS', 20),
         'max_post_age_days' => (int) env('SCRAPLING_MAX_POST_AGE_DAYS', 7),
+        'cooldown_seconds' => (int) env('SCRAPLING_COOLDOWN_SECONDS', 60),
+        'block_backoff_seconds' => (int) env('SCRAPLING_BLOCK_BACKOFF_SECONDS', 900),
     ],
 ];

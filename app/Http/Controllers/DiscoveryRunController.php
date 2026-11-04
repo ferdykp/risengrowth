@@ -97,7 +97,7 @@ class DiscoveryRunController extends Controller
 
         if (($data['source'] ?? 'threads') === 'scrapling') {
             RunPythonDiscoveryJob::dispatch($keyword->id, 'scrapling', $data['posted_from'] ?? null, $data['posted_to'] ?? null);
-            $message = 'Discovery Threads via Scrapling masuk antrean. Threads dapat meminta login atau memblokir akses; hasilnya tercatat di riwayat.';
+            $message = 'Discovery Threads via Scrapling masuk antrean. Pencarian Scrapling dijalankan bergiliran dengan jeda otomatis; Threads tetap dapat meminta login atau memblokir akses.';
 
             if ($request->expectsJson()) {
                 return response()->json(['status' => 'queued', 'source' => 'scrapling', 'keyword_id' => (int) $keyword->id,

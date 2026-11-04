@@ -6,6 +6,7 @@ use App\Services\Discovery\RunPythonDiscovery;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
@@ -20,6 +21,8 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 110;
 
+    public ?int $maxExceptions = null;
+
     public function __construct(
         public int $keywordId,
         public string $engine = 'python',
@@ -27,7 +30,9 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
         public ?string $postedTo = null,
     ) {
         if ($engine === 'scrapling') {
-            $this->tries = 1;
+            // Releases while waiting for the Threads cooldown count as attempts; a real failure is never retried.
+            $this->tries = 30;
+            $this->maxExceptions = 1;
         }
     }
 
@@ -40,8 +45,29 @@ class RunPythonDiscoveryJob implements ShouldBeUnique, ShouldQueue
     {
         $keyword = DB::table('search_keywords')->where('id', $this->keywordId)
             ->where('enabled', true)->whereNull('deleted_at')->first();
+        if ($keyword && $this->engine === 'scrapling' && ! $this->claimScraplingSlot()) {
+            return;
+        }
         if ($keyword) {
             $discovery->execute($keyword, $this->engine, $this->postedFrom, $this->postedTo);
         }
+    }
+
+    /**
+     * Space Threads requests across all Scrapling jobs: claim the next slot, or release until it opens.
+     */
+    private function claimScraplingSlot(): bool
+    {
+        $gap = (int) config('services.scrapling.cooldown_seconds');
+        if ($gap <= 0) {
+            return true;
+        }
+        $nextAllowedAt = now()->timestamp + $gap + random_int(0, intdiv($gap, 2));
+        if (Cache::add('scrapling-next-request-at', $nextAllowedAt, $nextAllowedAt - now()->timestamp)) {
+            return true;
+        }
+        $this->release(max(1, (int) Cache::get('scrapling-next-request-at', 0) - now()->timestamp));
+
+        return false;
     }
 }

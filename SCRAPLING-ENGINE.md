@@ -57,6 +57,14 @@ THREADS_EXCLUDED_USERNAMES=risencode.dev,risendev
 
 Keywords come from the existing **Kata Kunci** page. Each run searches one keyword.
 
+### Automatic delays
+
+- Scrapling jobs from the web UI run one after another. Each job waits at least `SCRAPLING_COOLDOWN_SECONDS` (default 60) after the previous one, plus up to 50% random jitter. A job that arrives early goes back to the queue until its slot opens, so clicking several keywords in a row is safe.
+- After a `LOGIN_WALL`, `HTTP_403` or `HTTP_429`, every Scrapling job pauses for `SCRAPLING_BLOCK_BACKOFF_SECONDS` (default 900 = 15 minutes).
+- The CLI waits `--delay` seconds (default 15) plus up to 50% jitter between keywords.
+- `growth:scan --engine=scrapling --now` skips the queue spacing but still sets the block pause.
+- Delays lower the chance of a login wall; they don't prevent it. Threads doesn't publish its limits.
+
 ### Post date range
 
 - The form has **Tanggal posting dari / sampai** fields (WIB dates, used only for Scrapling). They default to the last `SCRAPLING_MAX_POST_AGE_DAYS` days (default `7`) up to today.
@@ -80,7 +88,7 @@ scraper/.venv/bin/scrapling install
 
 ```bash
 # Worker only, prints JSON (repeat --keyword for several; --delay sets seconds between keywords)
-scraper/.venv/bin/python scraper/threads_scrapling.py --keyword website --keyword "jasa aplikasi" --delay 3
+scraper/.venv/bin/python scraper/threads_scrapling.py --keyword website --keyword "jasa aplikasi" --delay 15
 
 # Through Laravel, synchronously for one keyword ID
 php artisan growth:scan --engine=scrapling --keyword=1 --now

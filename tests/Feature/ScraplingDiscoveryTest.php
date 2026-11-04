@@ -11,6 +11,7 @@ use App\Services\Discovery\RunPythonDiscovery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -49,7 +50,7 @@ class ScraplingDiscoveryTest extends TestCase
             ->assertStatus(202)->assertJson(['status' => 'queued', 'source' => 'scrapling']);
 
         Bus::assertDispatched(RunPythonDiscoveryJob::class, fn ($job) => $job->keywordId === $keyword->id && $job->engine === 'scrapling'
-            && $job->tries === 1 && $job->postedFrom === '2026-10-28' && $job->postedTo === '2026-11-04');
+            && $job->maxExceptions === 1 && $job->postedFrom === '2026-10-28' && $job->postedTo === '2026-11-04');
         Bus::assertNotDispatched(RunApifyDiscoveryJob::class);
     }
 
@@ -143,8 +144,40 @@ class ScraplingDiscoveryTest extends TestCase
         ]);
     }
 
+    public function test_job_is_released_until_scrapling_cooldown_ends(): void
+    {
+        $this->freezeTime();
+        $keyword = $this->keyword();
+        Cache::put('scrapling-next-request-at', now()->timestamp + 40, 40);
+        Process::fake();
+        Process::preventStrayProcesses();
+
+        $job = (new RunPythonDiscoveryJob($keyword->id, 'scrapling'))->withFakeQueueInteractions();
+        $job->handle(app(RunPythonDiscovery::class));
+
+        $job->assertReleased(40);
+        Process::assertNothingRan();
+        $this->assertDatabaseCount('discovery_runs', 0);
+    }
+
+    public function test_job_claims_next_scrapling_slot_with_jittered_gap(): void
+    {
+        $this->freezeTime();
+        $keyword = $this->keyword();
+        Process::fake(['*threads_scrapling.py*' => Process::result(output: json_encode(['posts' => [], 'errors' => [], 'sources_configured' => 1]))]);
+        Process::preventStrayProcesses();
+
+        $job = (new RunPythonDiscoveryJob($keyword->id, 'scrapling'))->withFakeQueueInteractions();
+        $job->handle(app(RunPythonDiscovery::class));
+
+        $job->assertNotReleased();
+        $this->assertGreaterThanOrEqual(now()->timestamp + 60, Cache::get('scrapling-next-request-at'));
+        $this->assertLessThanOrEqual(now()->timestamp + 90, Cache::get('scrapling-next-request-at'));
+    }
+
     public function test_login_wall_fails_run_with_visible_reason(): void
     {
+        $this->freezeTime();
         $keyword = $this->keyword();
         Process::fake(['*threads_scrapling.py*' => Process::result(output: json_encode(['posts' => [],
             'errors' => [['source' => 'scrapling', 'error' => 'website: LOGIN_WALL']], 'sources_configured' => 1]), exitCode: 2)]);
@@ -156,6 +189,7 @@ class ScraplingDiscoveryTest extends TestCase
         } finally {
             $this->assertDatabaseHas('discovery_runs', ['source_type' => 'scrapling', 'status' => 'failed',
                 'error_summary' => 'Semua sumber gagal: website: LOGIN_WALL']);
+            $this->assertSame(now()->timestamp + 900, Cache::get('scrapling-next-request-at'));
             $this->assertDatabaseCount('discovered_posts', 0);
         }
     }

@@ -88,8 +88,10 @@ class RunTest(unittest.TestCase):
                 raise KeyError("x")
             return results[keyword]
 
-        with mock.patch.object(ts.time, "sleep"):
-            out = ts.run(["website", "blocked", "aplikasi", "broken"], searcher=searcher)
+        with mock.patch.object(ts.time, "sleep") as sleep:
+            out = ts.run(["website", "blocked", "aplikasi", "broken"], delay=10, searcher=searcher)
+        self.assertEqual(sleep.call_count, 3)
+        self.assertTrue(all(10 <= call.args[0] <= 15 for call in sleep.call_args_list))
         self.assertEqual([p["external_post_id"] for p in out["posts"]], ["1", "2"])
         self.assertEqual(out["posts"][0]["keyword"], "website")
         self.assertEqual(out["errors"], [{"source": "scrapling", "error": "blocked: HTTP_429"},

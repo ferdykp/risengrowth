@@ -83,6 +83,11 @@ class RunPythonDiscovery
                 'errors.*.error' => ['required', 'string', 'max:200'],
                 'sources_configured' => ['required', 'integer', 'min:1'],
             ])->validate();
+            $blocked = collect($decoded['errors'])->contains(fn (array $error): bool => (bool) preg_match('/LOGIN_WALL|HTTP_(403|429)/', $error['error']));
+            if ($isScrapling && $blocked) {
+                $backoff = (int) config('services.scrapling.block_backoff_seconds');
+                Cache::put('scrapling-next-request-at', now()->timestamp + $backoff, $backoff);
+            }
             if (! $result->successful() && ($result->exitCode() !== 2 || ! $decoded['errors'])) {
                 throw new RuntimeException('Python worker exited unexpectedly');
             }
