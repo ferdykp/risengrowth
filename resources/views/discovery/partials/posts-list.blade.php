@@ -1,11 +1,13 @@
 @foreach($posts as $post)
     @php($analysis = $post->analyses->first())
+    @php($analysisOutput = $analysis?->output ?? [])
+    @php($localAi = data_get($analysisOutput, 'local_ai'))
     <article class="rg-review-card">
         <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <span>{{ $analysis?->output['source'] ?? ucfirst($post->platform) }}</span>
+            <span>{{ data_get($analysisOutput, 'source', ucfirst($post->platform)) }}</span>
             @if($analysis)
                 <span aria-hidden="true">·</span>
-                <span>{{ ['qualified' => 'Layak ditinjau', 'uncertain' => 'Perlu ditinjau', 'rejected' => 'Tidak lolos'][$analysis->output['status'] ?? $analysis->status] ?? ucfirst($analysis->status) }}</span>
+                <span>{{ ['qualified' => 'Layak ditinjau', 'uncertain' => 'Perlu ditinjau', 'rejected' => 'Tidak lolos'][data_get($analysisOutput, 'status', $analysis->status)] ?? ucfirst($analysis->status) }}</span>
                 <span aria-hidden="true">·</span>
                 <span>{{ $analysis->score === null ? 'Tanpa skor' : $analysis->score.'/100' }}</span>
             @else
@@ -13,15 +15,15 @@
             @endif
         </div>
         <div class="flex flex-wrap items-center gap-2 text-xs">
-            <span class="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">{{ ['business' => 'Peluang bisnis', 'community' => 'Komunitas', 'not_relevant' => 'Tidak relevan'][$analysis?->output['category'] ?? ''] ?? 'Belum dikelompokkan' }}</span>
-            @if($analysis)<span class="text-slate-500">Review: {{ ['pending' => 'Menunggu', 'reviewed' => 'Sudah ditinjau'][$analysis->output['review_status'] ?? 'pending'] ?? ($analysis->output['review_status'] ?? 'Menunggu') }}</span>@endif
+            <span class="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">{{ ['business' => 'Peluang bisnis', 'community' => 'Komunitas', 'not_relevant' => 'Tidak relevan'][data_get($analysisOutput, 'category', '')] ?? 'Belum dikelompokkan' }}</span>
+            @if($analysis)<span class="text-slate-500">Peninjauan: {{ ['pending' => 'Menunggu', 'reviewed' => 'Sudah ditinjau'][data_get($analysisOutput, 'review_status', 'pending')] ?? data_get($analysisOutput, 'review_status', 'Menunggu') }}</span>@endif
         </div>
         <p class="text-sm whitespace-pre-wrap break-words text-slate-800">{{ $post->body ?: 'Postingan ini tidak memiliki teks.' }}</p>
-        @if($analysis?->output['rationale'])<p class="text-xs text-slate-600">Alasan analisis: {{ $analysis->output['rationale'] }}</p>@endif
-        @if($analysis && !empty($analysis->output['evidence']))<p class="rg-review-evidence text-xs text-slate-500 break-words">Bukti: {{ json_encode($analysis->output['evidence'], JSON_UNESCAPED_UNICODE) }}</p>@endif
+        @if(data_get($analysisOutput, 'rationale'))<p class="text-xs text-slate-600">Alasan analisis: {{ data_get($analysisOutput, 'rationale') }}</p>@endif
+        @if(data_get($analysisOutput, 'evidence'))<p class="rg-review-evidence text-xs text-slate-500 break-words">Bukti: {{ json_encode(data_get($analysisOutput, 'evidence'), JSON_UNESCAPED_UNICODE) }}</p>@endif
         @if($post->permalink && parse_url($post->permalink, PHP_URL_SCHEME) === 'https')<a href="{{ $post->permalink }}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">Buka postingan asli ↗</a>@endif
         <a href="{{ route('comments.index', ['post' => $post->id]) }}#quick-comments" class="text-sm font-semibold text-blue-700 underline">Buat balasan / pesan</a>
-        @if($analysis?->output['local_ai'])<p class="text-xs text-slate-600">Saran AI (perlu ditinjau): {{ $analysis->output['local_ai']['reason'] }} {{ $analysis->output['local_ai']['follow_up'] }}</p>@endif
+        @if($localAi)<p class="text-xs text-slate-600">Saran AI (perlu ditinjau): {{ data_get($localAi, 'reason') }} {{ data_get($localAi, 'follow_up') }}</p>@endif
         @if(config('services.ollama.enabled'))<form method="POST" action="{{ route('discovery.posts.local', $post) }}">@csrf<button class="text-sm text-blue-700 underline">Minta saran AI lokal</button></form>@endif
         <form method="POST" action="{{ route('discovery.posts.review', $post) }}" class="rg-review-form">
             @csrf @method('PATCH')
