@@ -39,7 +39,10 @@ class DiscoveryRunController extends Controller
 
         $data = $request->validate([
             'existing_run_id' => ['nullable', 'string', 'regex:/\A[a-zA-Z0-9]{1,64}\z/'],
-            'source' => ['nullable', Rule::in(['python', 'threads', 'apify'])],
+            'source' => ['nullable', Rule::in(['python', 'threads', 'apify', 'scrapling'])],
+            'posted_from' => ['exclude_unless:source,scrapling', 'nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Jakarta')->toDateString()],
+            'posted_to' => ['exclude_unless:source,scrapling', 'nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Jakarta')->toDateString(),
+                Rule::when($request->filled('posted_from'), 'after_or_equal:posted_from')],
             'keyword_id' => [
                 'required',
                 'integer',
@@ -74,7 +77,7 @@ class DiscoveryRunController extends Controller
 
         if (($data['source'] ?? 'threads') === 'apify') {
             try {
-                $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, $data['existing_run_id'] ?? null, manual: true);
+                $run = app(RunApifyDiscovery::class)->enqueue($keyword->id, $data['existing_run_id'] ?? null);
                 $message = $run->status === 'completed' ? 'Run ini sudah diimpor. Data tidak dibuat ulang.' : 'Discovery Apify masuk antrean. Status akan diperbarui otomatis.';
                 if ($request->expectsJson()) {
                     return response()->json(['status' => $run->status === 'completed' ? 'completed' : 'queued', 'source' => 'apify',
@@ -90,6 +93,18 @@ class DiscoveryRunController extends Controller
 
                 return back()->withErrors(['discovery' => $exception->getMessage()]);
             }
+        }
+
+        if (($data['source'] ?? 'threads') === 'scrapling') {
+            RunPythonDiscoveryJob::dispatch($keyword->id, 'scrapling', $data['posted_from'] ?? null, $data['posted_to'] ?? null);
+            $message = 'Discovery Threads via Scrapling masuk antrean. Pencarian Scrapling dijalankan bergiliran dengan jeda otomatis; Threads tetap dapat meminta login atau memblokir akses.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'queued', 'source' => 'scrapling', 'keyword_id' => (int) $keyword->id,
+                    'after_id' => $afterId, 'message' => $message], 202);
+            }
+
+            return redirect()->route('discovery.index')->with('success', $message);
         }
 
         if (($data['source'] ?? 'threads') === 'python') {

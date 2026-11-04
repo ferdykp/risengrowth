@@ -107,6 +107,7 @@ class ApifyThreadsProvider
         $postRows = 0;
         $emptyNotices = 0;
         $skipped = 0;
+        $firstFailure = null;
         foreach ($entries as $entry) {
             if (! is_array($entry)) {
                 throw new ApifyDiscoveryException('INVALID_DATASET', 'Baris dataset bukan objek.');
@@ -135,9 +136,10 @@ class ApifyThreadsProvider
             try {
                 $post = $this->normalizer->fromApify($entry, $excludedUsernames);
             } catch (ApifyDiscoveryException $exception) {
-                if (! in_array($exception->reason, ['INVALID_POST', 'INVALID_POST_URL', 'INVALID_POST_DATE'], true)) {
+                if (! in_array($exception->reason, ['ACTOR_OUTPUT_ERROR', 'INVALID_POST', 'INVALID_POST_URL', 'INVALID_POST_DATE'], true)) {
                     throw $exception;
                 }
+                $firstFailure ??= $exception;
                 $skipped++;
 
                 continue;
@@ -159,8 +161,8 @@ class ApifyThreadsProvider
             throw new ApifyDiscoveryException('INVALID_DATASET', 'Dataset berisi postingan sekaligus informasi tidak ada hasil.');
         }
 
-        if ($skipped > 0 && $posts === [] && $own === 0) {
-            throw new ApifyDiscoveryException('INVALID_DATASET', 'Semua baris dataset tidak valid. Format output Actor mungkin berubah.');
+        if ($firstFailure !== null && $posts === [] && $own === 0) {
+            throw $firstFailure;
         }
         if ($skipped > 0) {
             Log::warning('Apify rows skipped', ['run_id' => $runId, 'skipped' => $skipped]);

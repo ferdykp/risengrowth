@@ -82,4 +82,19 @@ return [
         'script' => base_path('scraper/main.py'),
         'bin' => env('RISENGROWTH_PYTHON', base_path('scraper/.venv/bin/python')),
     ],
+
+    'scraper' => [
+        'engine' => env('SCRAPER_ENGINE', 'apify'),
+    ],
+
+    'scrapling' => [
+        'script' => base_path('scraper/threads_scrapling.py'),
+        'mode' => env('SCRAPLING_MODE', 'http'),
+        'timeout' => (int) env('SCRAPLING_TIMEOUT', 20),
+        'max_posts' => (int) env('SCRAPLING_MAX_POSTS', 20),
+        'scrolls' => (int) env('SCRAPLING_SCROLLS', 5),
+        'max_post_age_days' => (int) env('SCRAPLING_MAX_POST_AGE_DAYS', 7),
+        'cooldown_seconds' => (int) env('SCRAPLING_COOLDOWN_SECONDS', 60),
+        'block_backoff_seconds' => (int) env('SCRAPLING_BLOCK_BACKOFF_SECONDS', 900),
+    ],
 ];

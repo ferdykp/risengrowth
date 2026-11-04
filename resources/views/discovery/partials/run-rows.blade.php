@@ -22,7 +22,10 @@
                                     </p>
 
                                     @if(data_get($run, 'status') === 'completed' && (int) data_get($run, 'fetched_count') === 0)
-                                        <p class="mt-1 max-w-sm text-xs leading-relaxed text-amber-800">{{ in_array(data_get($run, 'source_type'), ['threads', 'apify']) ? (data_get($run, 'source_type') === 'apify' ? 'Tidak ada postingan pada hasil pencarian ini, jadi belum ada peluang yang dibuat.' : 'Pencarian Threads belum menemukan postingan. Pastikan kata kunci sesuai dan akun memiliki izin pencarian publik.') : 'Tidak ada kecocokan pada situs yang dicari. Pencarian ini tidak mencakup Threads.' }}</p>
+<p class="mt-1 max-w-sm text-xs leading-relaxed text-amber-800">{{ in_array(data_get($run, 'source_type'), ['threads', 'apify', 'scrapling']) ? (data_get($run, 'source_type') === 'apify' ? 'Hasil pencarian Apify tidak memuat postingan untuk topik ini.' : (data_get($run, 'source_type') === 'scrapling' ? 'Halaman pencarian Threads publik tidak memuat postingan untuk topik ini.' : 'Threads tidak mengembalikan postingan. Periksa topik dan izin pencarian publik pada akun Meta.')) : 'Tidak ada kecocokan pada sumber web yang dipilih. Pencarian ini tidak mencakup Threads.' }}</p>
+                                    @endif
+                                    @if(data_get($run, 'source_type') === 'scrapling' && $run->posted_from)
+                                        <p class="mt-1 text-xs text-slate-500">Rentang {{ \Illuminate\Support\Carbon::parse($run->posted_from)->format('d M') }}–{{ \Illuminate\Support\Carbon::parse($run->posted_to)->format('d M Y') }} · Di luar rentang {{ $run->out_of_range_count }} · Akun sendiri {{ $run->excluded_own_count }}</p>
                                     @endif
                                     @if(data_get($run, 'source_type') === 'apify')
                                         <p class="mt-1 text-xs text-slate-500">Layak {{ $run->relevant_count }} · Perlu ditinjau {{ $run->uncertain_count }} · Tidak lolos {{ $run->rejected_count }} · Akun sendiri {{ $run->excluded_own_count }}</p>
@@ -38,7 +41,7 @@
 
 
                                 <td class="py-4 pr-4 text-slate-600">
-                                    {{ ['apify' => 'Threads (Apify)', 'python' => 'Situs web terpilih', 'threads' => 'Threads (akses resmi)'][$run->source_type] ?? $run->source_type }}
+                                    {{ ['apify' => 'Threads (Apify)', 'scrapling' => 'Threads (Scrapling)', 'python' => 'Situs web terpilih', 'threads' => 'Threads (akses resmi)'][$run->source_type] ?? $run->source_type }}
                                 </td>
 
 

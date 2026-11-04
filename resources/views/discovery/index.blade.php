@@ -161,9 +161,10 @@
                     <div>
                         <label for="run-source" class="rg-field-label">Sumber pencarian</label>
                         <select id="run-source" name="source" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
-                            <option value="apify" @selected(old('source', 'apify') === 'apify')>Threads (Apify)</option>
+                            <option value="apify" @selected(old('source', config('services.scraper.engine')) === 'apify')>Threads (Apify)</option>
+                            <option value="scrapling" @selected(old('source', config('services.scraper.engine')) === 'scrapling')>Threads (Scrapling · eksperimen)</option>
                             <option value="threads" @selected(old('source') === 'threads')>Threads (koneksi resmi)</option>
-                            <option value="python" @selected(old('source') === 'python')>Sumber web terpilih</option>
+                            <option value="python" @selected(old('source') === 'python')>Situs web terpilih</option>
                         </select>
                     </div>
 
@@ -191,8 +192,19 @@
                     </div>
 
                     <div>
+                        <label for="posted-from" class="rg-field-label">Tanggal posting dari</label>
+                        <input id="posted-from" name="posted_from" type="date" max="{{ now('Asia/Jakarta')->toDateString() }}"
+                            value="{{ old('posted_from', now('Asia/Jakarta')->subDays((int) config('services.scrapling.max_post_age_days'))->toDateString()) }}"
+                            class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                    </div>
+                    <div>
+                        <label for="posted-to" class="rg-field-label">Sampai tanggal</label>
+                        <input id="posted-to" name="posted_to" type="date" max="{{ now('Asia/Jakarta')->toDateString() }}" value="{{ old('posted_to', now('Asia/Jakarta')->toDateString()) }}"
+                            class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                    </div>
+                    <div>
                         <label for="existing-apify-run" class="rg-field-label">ID pencarian sebelumnya (opsional)</label>
-                        <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="Isi jika ingin mengambil hasil dari pencarian sebelumnya" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
+                        <input id="existing-apify-run" name="existing_run_id" maxlength="64" pattern="[a-zA-Z0-9]+" placeholder="Isi hanya untuk mengambil hasil pencarian lama" class="w-full rounded-xl border border-slate-200 p-3 text-sm">
                     </div>
                     <button data-unavailable="{{ $canRunDiscovery ? 'false' : 'true' }}" id="discovery-run-button" type="submit" @disabled(!$canRunDiscovery)
                         class="inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
@@ -223,33 +235,24 @@
         <p class="mb-5 text-xs text-slate-500" id="discovery-live-health">Status dan riwayat diperbarui otomatis.</p>
 
 
-        <details class="rg-panel mb-6 rounded-xl border border-slate-200 bg-white p-5">
-            <summary class="cursor-pointer text-lg font-bold">Batas dan pengaturan pencarian otomatis</summary>
+<details class="rg-panel mb-6 rounded-xl border border-slate-200 bg-white p-5">
+            <summary class="cursor-pointer text-lg font-bold">Batas penggunaan dan pengaturan</summary>
             <div class="mt-4 space-y-3">
-            <p class="text-sm text-slate-500">Bagian ini menjelaskan kuota pencarian dan pengaturan otomatis.</p>
-            <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Token server tersedia' : 'Token Apify belum diatur oleh admin' }} · Layanan pencarian {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }} · Otomatis {{ $apifySettings->automation_enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena batas penggunaan' : '' }}</p>
-            <p class="text-xs text-slate-600">Maksimal 10 postingan per pencarian. Batas harian {{ $apifySettings->daily_runs }} kali (reset pukul 07.00 WIB); sudah dicoba {{ $apifyStartsToday }} kali hari ini.</p>
-            <p class="text-xs text-slate-500">Pencarian baru memakai layanan Apify. Untuk mengambil hasil lama, masukkan ID pencarian sebelumnya dan pilih topik yang sama.</p>
-            @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir dilaporkan USD {{ $apifyUsage['usage_usd'] }} / limit akun USD {{ $apifyUsage['limit_usd'] }} pada {{ \Illuminate\Support\Carbon::parse($apifyUsage['checked_at'])->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Ini bukan saldo kredit gratis real-time.</p>@endif
-            @if($isAdmin)
-                <form method="POST" action="{{ route('discovery.apify.settings') }}" class="rg-provider-settings">
-                    @csrf @method('PATCH')
-                    <label class="rg-provider-toggle text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan Apify</label>
-                    <label class="rg-provider-toggle text-sm"><input type="hidden" name="automation_enabled" value="0"><input type="checkbox" name="automation_enabled" value="1" @checked($apifySettings->automation_enabled)> Jalankan pencarian otomatis</label>
-                    <label class="rg-provider-number">Pencarian maksimal per hari<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
-                    <label class="rg-provider-number">Jeda minimal pencarian otomatis (menit)<input type="number" name="min_interval_minutes" min="1" max="10080" required value="{{ $apifySettings->min_interval_minutes }}" class="mt-1 block w-36 rounded-lg border border-slate-200 p-2"></label>
-                    <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan pengaturan</button>
-                </form>
-            @endif
-            <p class="text-xs text-slate-500">Topik aktif dicari mengikuti jeda yang diatur. Topik tanpa jeda khusus memakai pengaturan ini.</p>
-            <details class="text-xs text-slate-600"><summary class="cursor-pointer font-semibold">Lihat jadwal kata kunci aktif</summary>
-                @foreach($enabledKeywords as $keyword)<p class="mt-2">{{ $keyword->phrase }} · {{ max($apifySettings->min_interval_minutes, $keyword->interval_minutes ?? $apifySettings->min_interval_minutes) }} menit · Jatuh tempo {{ $nextScans[$keyword->id]->copy()->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}. Pencarian mengikuti batas harian dan pengaturan otomatis.</p>@endforeach
-            </details>
-            <a href="{{ route('discovery.posts.index') }}" class="inline-block text-sm font-semibold text-blue-700 underline">Lihat postingan yang ditemukan →</a>
+                <p class="text-sm text-slate-600">{{ $apifyConfigured ? 'Layanan pencarian siap' : 'Token pencarian belum diatur oleh admin' }} · Apify {{ $apifySettings->enabled ? 'aktif' : 'nonaktif' }}{{ $apifyPaused ? ' · Dijeda karena batas penggunaan' : '' }}</p>
+                <p class="text-xs text-slate-600">Maksimal 10 postingan per pencarian. Batas {{ $apifySettings->daily_runs }} kali per hari (reset pukul 07.00 WIB); sudah dimulai {{ $apifyStartsToday }} kali hari ini. Batas biaya per pencarian USD {{ config('services.apify.probe_max_charge_usd') }} dan anggaran bulanan USD {{ config('services.apify.monthly_budget_usd') }}.</p>
+                <p class="text-xs text-slate-500">Pencarian hanya berjalan saat dimulai manual, selama tidak ada proses aktif dan batas penggunaan masih tersedia. Memasukkan ID pencarian lama akan mengambil hasil yang sudah ada tanpa memulai pencarian baru.</p>
+                @if($apifyUsage)<p class="text-xs text-slate-500">Pemakaian akun terakhir: USD {{ $apifyUsage['usage_usd'] }} dari batas USD {{ $apifyUsage['limit_usd'] }} ({{ \Illuminate\Support\Carbon::parse($apifyUsage['checked_at'])->timezone('Asia/Jakarta')->format('d M Y H:i \W\I\B') }}). Ini bukan saldo kredit gratis real-time.</p>@endif
+                @if($isAdmin)
+                    <form method="POST" action="{{ route('discovery.apify.settings') }}" class="rg-provider-settings">
+                        @csrf @method('PATCH')
+                        <label class="rg-provider-toggle text-sm"><input type="hidden" name="enabled" value="0"><input type="checkbox" name="enabled" value="1" @checked($apifySettings->enabled)> Aktifkan pencarian Apify</label>
+                        <label class="rg-provider-number">Batas pencarian per hari<input type="number" name="daily_runs" min="1" max="10" required value="{{ $apifySettings->daily_runs }}" class="mt-1 block w-28 rounded-lg border border-slate-200 p-2"></label>
+                        <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Simpan pengaturan</button>
+                    </form>
+                @endif
+                <a href="{{ route('discovery.posts.index') }}" class="inline-block text-sm font-semibold text-blue-700 underline">Lihat semua postingan ditemukan →</a>
             </div>
         </details>
-
-        {{-- ================================================================ --}}
         {{-- FLASH MESSAGES                                                   --}}
         {{-- ================================================================ --}}
 

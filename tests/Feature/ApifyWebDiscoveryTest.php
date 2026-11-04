@@ -31,9 +31,9 @@ class ApifyWebDiscoveryTest extends TestCase
             'normalized_phrase' => $phrase, 'enabled' => true, 'search_type' => 'RECENT', 'interval_minutes' => 360]);
     }
 
-    private function enable(bool $automatic = false): void
+    private function enable(): void
     {
-        DB::table('discovery_provider_settings')->where('id', 1)->update(['enabled' => true, 'automation_enabled' => $automatic]);
+        DB::table('discovery_provider_settings')->where('id', 1)->update(['enabled' => true]);
     }
 
     /** @return array<string, mixed> */
@@ -160,30 +160,27 @@ class ApifyWebDiscoveryTest extends TestCase
         $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'enabled' => false]);
     }
 
-    public function test_admin_can_enable_and_disable_automation_with_validation(): void
+    public function test_admin_can_update_provider_settings_with_validation(): void
     {
         $admin = User::factory()->admin()->create();
-        $this->actingAs($admin)->patch(route('discovery.apify.settings'), ['enabled' => 1, 'automation_enabled' => 1, 'daily_runs' => 2, 'min_interval_minutes' => 360])
+        $this->actingAs($admin)->patch(route('discovery.apify.settings'), ['enabled' => 1, 'daily_runs' => 2])
             ->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'enabled' => true, 'automation_enabled' => true, 'daily_runs' => 2]);
-        $this->patch(route('discovery.apify.settings'), ['enabled' => 1, 'automation_enabled' => 1, 'daily_runs' => 99, 'min_interval_minutes' => 0])
-            ->assertSessionHasErrors(['daily_runs', 'min_interval_minutes']);
+        $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'enabled' => true, 'daily_runs' => 2]);
+        $this->patch(route('discovery.apify.settings'), ['enabled' => 1, 'daily_runs' => 99])
+            ->assertSessionHasErrors(['daily_runs']);
         $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'daily_runs' => 2]);
     }
 
-    public function test_automation_dispatches_due_keywords_and_respects_interval(): void
+    public function test_scheduler_never_starts_a_search_even_with_the_old_automation_flag_on(): void
     {
-        $this->freezeTime();
-        $keyword = $this->keyword(User::factory()->admin()->create());
-        $this->enable(true);
+        $this->keyword(User::factory()->admin()->create());
+        DB::table('discovery_provider_settings')->where('id', 1)->update(['enabled' => true, 'automation_enabled' => true]);
         Queue::fake([RunApifyDiscoveryJob::class]);
 
         $this->artisan('growth:apify-dispatch')->assertSuccessful();
-        $this->artisan('growth:apify-dispatch')->assertSuccessful();
 
-        $this->assertDatabaseCount('discovery_runs', 1);
-        $this->assertDatabaseHas('discovery_runs', ['search_keyword_id' => $keyword->id, 'status' => 'queued']);
-        Queue::assertPushed(RunApifyDiscoveryJob::class, 2);
+        $this->assertDatabaseCount('discovery_runs', 0);
+        Queue::assertNothingPushed();
     }
 
     public function test_old_buyer_post_goes_to_review_instead_of_becoming_a_lead(): void
@@ -202,22 +199,7 @@ class ApifyWebDiscoveryTest extends TestCase
         $this->assertDatabaseHas('discovery_runs', ['id' => $run->id, 'status' => 'completed', 'relevant_count' => 1, 'uncertain_count' => 1, 'added_count' => 1]);
     }
 
-    public function test_never_run_keyword_gets_the_daily_run_before_older_keywords(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $previous = $this->keyword($admin, 'website');
-        DB::table('search_keywords')->where('id', $previous->id)->update(['last_ran_at' => now()->subDay()]);
-        $neverRun = $this->keyword($admin, 'kasir');
-        $this->enable(true);
-        Queue::fake([RunApifyDiscoveryJob::class]);
-
-        $this->artisan('growth:apify-dispatch')->assertSuccessful();
-
-        $this->assertDatabaseCount('discovery_runs', 1);
-        $this->assertDatabaseHas('discovery_runs', ['search_keyword_id' => $neverRun->id]);
-    }
-
-    public function test_failed_start_moves_keyword_behind_others_in_rotation(): void
+    public function test_failed_start_still_records_the_keyword_attempt(): void
     {
         $this->freezeSecond();
         $keyword = $this->keyword(User::factory()->admin()->create());
@@ -424,18 +406,16 @@ class ApifyWebDiscoveryTest extends TestCase
         Http::assertNotSent(fn ($request) => $request->method() === 'POST');
     }
 
-    public function test_manual_search_does_not_wait_for_automatic_interval_but_reuses_an_active_run(): void
+    public function test_manual_search_can_repeat_a_recent_keyword_but_reuses_an_active_run(): void
     {
         $admin = User::factory()->admin()->create();
         $keyword = $this->keyword($admin);
-        $this->enable(true);
+        $this->enable();
         DB::table('discovery_provider_settings')->where('id', 1)->update(['daily_runs' => 3]);
         Queue::fake([RunApifyDiscoveryJob::class]);
         $old = app(RunApifyDiscovery::class)->enqueue($keyword->id);
         DB::table('discovery_runs')->where('id', $old->id)->update(['status' => 'completed', 'provider_run_id' => 'oldremote', 'provider_attempted_at' => now()]);
 
-        $this->artisan('growth:apify-dispatch')->assertSuccessful();
-        $this->assertDatabaseCount('discovery_runs', 1);
         $first = $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id])->assertAccepted();
         $this->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id])->assertAccepted()->assertJsonPath('run_id', $first->json('run_id'));
 
@@ -455,46 +435,6 @@ class ApifyWebDiscoveryTest extends TestCase
 
         $this->actingAs($admin)->postJson(route('discovery.run'), ['source' => 'apify', 'keyword_id' => $keyword->id])
             ->assertUnprocessable()->assertJsonPath('code', 'DAILY_LIMIT');
-
-        $this->assertDatabaseCount('discovery_runs', 1);
-        Http::assertNothingSent();
-    }
-
-    public function test_one_minute_automatic_interval_is_accepted_and_inherited_by_an_unset_keyword(): void
-    {
-        $this->freezeTime();
-        $admin = User::factory()->admin()->create();
-        $keyword = $this->keyword($admin);
-        $keyword->update(['interval_minutes' => null]);
-        Queue::fake([RunApifyDiscoveryJob::class]);
-        $this->actingAs($admin)->patch(route('discovery.apify.settings'), [
-            'enabled' => 1, 'automation_enabled' => 1, 'daily_runs' => 3, 'min_interval_minutes' => 1,
-        ])->assertRedirect()->assertSessionHasNoErrors();
-        $old = app(RunApifyDiscovery::class)->enqueue($keyword->id);
-        DB::table('discovery_runs')->where('id', $old->id)->update(['status' => 'completed', 'provider_run_id' => 'oldremote', 'provider_attempted_at' => now()]);
-
-        $this->artisan('growth:apify-dispatch')->assertSuccessful();
-        $this->assertDatabaseCount('discovery_runs', 1);
-        $this->travel(61)->seconds();
-        $this->artisan('growth:apify-dispatch')->assertSuccessful();
-
-        $this->assertDatabaseCount('discovery_runs', 2);
-        $this->assertDatabaseHas('discovery_provider_settings', ['id' => 1, 'min_interval_minutes' => 1]);
-        Http::assertNothingSent();
-    }
-
-    public function test_longer_keyword_interval_still_applies_to_automation(): void
-    {
-        $this->freezeTime();
-        $keyword = $this->keyword(User::factory()->admin()->create());
-        $this->enable(true);
-        DB::table('discovery_provider_settings')->where('id', 1)->update(['daily_runs' => 3, 'min_interval_minutes' => 1]);
-        Queue::fake([RunApifyDiscoveryJob::class]);
-        $old = app(RunApifyDiscovery::class)->enqueue($keyword->id);
-        DB::table('discovery_runs')->where('id', $old->id)->update(['status' => 'completed', 'provider_run_id' => 'oldremote', 'provider_attempted_at' => now()]);
-        $this->travel(61)->seconds();
-
-        $this->artisan('growth:apify-dispatch')->assertSuccessful();
 
         $this->assertDatabaseCount('discovery_runs', 1);
         Http::assertNothingSent();
