@@ -30,7 +30,6 @@ Eksplorasi form (source=scrapling)
 - Deduplicates by the numeric Threads post ID. Apify reports the same numeric ID, so a post found by both engines is stored once.
 - Reports problems per keyword without crashing: `LOGIN_WALL`, `HTTP_403`, `HTTP_429`, other `HTTP_xxx`, `NETWORK_ERROR`, `UNEXPECTED_*`. Partial results are kept. If every keyword fails, the run is marked failed and the reason appears in run history.
 - `--mode browser` uses Scrapling's `StealthyFetcher` to render JavaScript. Scrapling 0.5 no longer has `DynamicFetcher`, so `StealthyFetcher` is the only browser option. Cloudflare solving stays off, and no login, cookies or private APIs are used.
-- In browser mode the search page is scrolled `SCRAPLING_SCROLLS` times (default 5, max 15) with 1.5–3 s pauses. Posts that load while scrolling are read from the JSON responses the page itself receives, so more than the first batch comes back. HTTP mode ignores this setting and only sees the first batch.
 
 ## Switching engines
 
@@ -51,8 +50,7 @@ SCRAPER_ENGINE=scrapling
 RISENGROWTH_PYTHON=/absolute/path/to/project/scraper/.venv/bin/python   # optional; this is the default path
 SCRAPLING_MODE=http        # or browser
 SCRAPLING_TIMEOUT=20       # seconds per request
-SCRAPLING_MAX_POSTS=20     # per keyword (max 100); raise it with browser scrolling
-SCRAPLING_SCROLLS=5        # browser mode only: scrolls per search (0-15)
+SCRAPLING_MAX_POSTS=20     # per keyword
 SCRAPLING_MAX_POST_AGE_DAYS=7  # default date range: today minus N days to today (WIB)
 THREADS_EXCLUDED_USERNAMES=risencode.dev,risendev
 ```
@@ -115,8 +113,7 @@ RISENGROWTH_LIVE_THREADS=1 RISENGROWTH_LIVE_KEYWORD=website \
 
 - Threads search often needs a login when you are signed out. In that case the run fails with `LOGIN_WALL`. This is expected, and the engine does not try to get around it.
 - Threads may answer automated clients with 403/429, and it changes its embedded JSON without notice. If the post shape changes, results come back empty or as `LOGIN_WALL` until the parser is updated.
-- Stealth or browser mode does not guarantee success. Signed-out Threads often shows a login prompt after a few scrolls; the posts loaded before that are still kept.
-- Browser mode needs `scrapling install` and the browser's system libraries on the server. Each search takes about 20–60 s instead of a few seconds.
+- Stealth or browser mode does not guarantee success.
 - The parser was written against fixtures of Threads' known embedded post shape. It has not been checked against live Threads output yet. Run the live test above from a machine with network access before relying on it.
 - An empty result can't be told apart from a silently changed page layout. Compare with an Apify run when in doubt.
 - Check Threads' terms before using this in production. Only public data is accessed.
