@@ -76,10 +76,46 @@ class CommentSuggestionTest extends TestCase
         Http::fake(['api.groq.com/*' => Http::response([], $status)]);
 
         $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload())
-            ->assertRedirect()->assertSessionHas('success', 'AI gagal memberi hasil kali ini. Template cadangan siap; edit sesuai postingan lalu salin ke Threads.');
+            ->assertRedirect()->assertSessionHas('success');
 
+        $this->assertStringContainsString('Template cadangan siap', session('success'));
         $this->assertDatabaseHas('comment_suggestions', ['provider' => 'template']);
         Http::assertSentCount(1);
+    }
+
+    public function test_deprecated_groq_model_retries_with_a_supported_model(): void
+    {
+        config()->set(['services.groq.key' => 'test-private-key', 'services.groq.model' => 'llama-3.1-8b-instant']);
+        $comment = 'Untuk katalog simpel, tombol WhatsApp bisa jadi langkah awal yang praktis. Produknya ada berapa?';
+        $requestCount = 0;
+        Http::fake(function () use (&$requestCount, $comment) {
+            $requestCount++;
+
+            if ($requestCount === 1) {
+                return Http::response(['error' => ['message' => 'The model has been decommissioned']], 400);
+            }
+
+            return Http::response(['choices' => [['message' => ['content' => $comment]]]]);
+        });
+
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload())->assertRedirect();
+
+        $this->assertDatabaseHas('comment_suggestions', ['provider' => 'groq', 'body' => $comment]);
+        $this->assertSame(2, $requestCount);
+        Http::assertSent(fn ($request): bool => $request['model'] === 'openai/gpt-oss-20b');
+    }
+
+    public function test_invalid_groq_credentials_are_reported_without_exposing_the_key(): void
+    {
+        config()->set('services.groq.key', 'test-private-key');
+        Http::fake(['api.groq.com/*' => Http::response(['error' => ['message' => 'Unauthorized']], 401)]);
+
+        $this->actingAs(User::factory()->create())->post(route('comments.suggestions.store'), $this->payload())
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertStringContainsString('Kunci akses provider AI ditolak', session('success'));
+        $this->assertStringNotContainsString('test-private-key', session('success'));
+        $this->assertDatabaseHas('comment_suggestions', ['provider' => 'template']);
     }
 
     public function test_quick_suggestion_uses_local_ai_when_groq_is_unavailable(): void

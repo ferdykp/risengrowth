@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\Discovery\GenerateCommentSuggestion;
-use App\Services\Discovery\LocalAiAssistant;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,16 +38,24 @@ class CommentSuggestionController extends Controller
             'purpose' => $data['purpose'] ?? 'comment', 'tone' => $data['tone'], 'provider' => $result['provider'], 'body' => $result['body'], 'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        $aiConfigured = filled(config('services.groq.key')) || app(LocalAiAssistant::class)->enabled();
+        $fallbackCause = match ($result['fallback_reason'] ?? null) {
+            'not_configured' => 'AI belum aktif karena provider belum dikonfigurasi.',
+            'invalid_credentials' => 'Kunci akses provider AI ditolak. Periksa konfigurasi AI di server.',
+            'rate_limited' => 'Permintaan ke AI sedang dibatasi. Coba lagi beberapa saat.',
+            'model_unavailable' => 'Model AI di server tidak tersedia. Periksa pengaturan model provider.',
+            'connection_failed', 'provider_unavailable' => 'Server tidak berhasil terhubung ke provider AI.',
+            'local_ai_unavailable' => 'Provider AI belum memberi hasil yang bisa dipakai.',
+            default => 'AI gagal memberi hasil kali ini.',
+        };
 
         if (($data['purpose'] ?? 'comment') === 'dm') {
             return redirect()->to(route('comments.index', [], false).'#quick-comments')->withInput($data)->with('success', $result['provider'] === 'template'
-                ? ($aiConfigured ? 'AI gagal memberi hasil kali ini. Template cadangan siap; edit dulu lalu salin dan kirim sendiri melalui Threads.' : 'AI belum aktif karena provider belum dikonfigurasi. Template gratis siap; edit dulu lalu salin dan kirim sendiri melalui Threads.')
+                ? $fallbackCause.' Template cadangan siap; edit dulu lalu salin dan kirim sendiri melalui Threads.'
                 : 'Draft DM siap. Review, salin, lalu buka profil penulis dan kirim sendiri melalui Threads.');
         }
 
         return redirect()->to(route('comments.index', [], false).'#quick-comments')->withInput($data)->with('success', $result['provider'] === 'template'
-            ? ($aiConfigured ? 'AI gagal memberi hasil kali ini. Template cadangan siap; edit sesuai postingan lalu salin ke Threads.' : 'AI belum aktif karena provider belum dikonfigurasi. Template gratis siap; edit sesuai postingan lalu salin ke Threads.')
+            ? $fallbackCause.' Template cadangan siap; edit sesuai postingan lalu salin ke Threads.'
             : 'Saran komentar siap. Baca dan edit dulu, lalu salin ke Threads.');
     }
 

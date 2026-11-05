@@ -2,6 +2,7 @@
 
 namespace App\Services\Discovery;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -11,29 +12,41 @@ class GenerateCommentSuggestion
 {
     public function __construct(private readonly LocalAiAssistant $localAi) {}
 
-    /** @return array{body: string, provider: string} */
+    /** @return array{body: string, provider: string, fallback_reason?: string} */
     public function generate(string $post, string $tone, bool $allowBrand = true, string $provider = 'auto', string $purpose = 'comment'): array
     {
         $canBrand = $allowBrand && $this->isServiceRequest($post);
         $instructions = $this->instructions($tone, $canBrand, $purpose);
+        $fallbackReason = filled(config('services.groq.key')) ? null : 'not_configured';
         if (in_array($provider, ['auto', 'groq'], true) && filled(config('services.groq.key'))) {
             try {
-                $response = Http::withToken(config('services.groq.key'))->acceptJson()->connectTimeout(5)->timeout(20)
-                    ->withOptions(['allow_redirects' => false])->post('https://api.groq.com/openai/v1/chat/completions', [
-                        'model' => config('services.groq.model', 'llama-3.1-8b-instant'),
-                        'temperature' => 0.65, 'max_tokens' => 350,
-                        'messages' => [
-                            ['role' => 'system', 'content' => $instructions],
-                            ['role' => 'user', 'content' => "Postingan untuk ditanggapi:\n".$post],
-                        ],
-                    ]);
+                $model = (string) config('services.groq.model', 'openai/gpt-oss-20b');
+                $response = $this->requestGroq($model, $instructions, $post);
+                $fallbackModel = (string) config('services.groq.fallback_model', 'openai/gpt-oss-20b');
+
+                if (! $response->successful() && $this->isModelUnavailable($response) && $model !== $fallbackModel) {
+                    $response = $this->requestGroq($fallbackModel, $instructions, $post);
+                    $model = $fallbackModel;
+                }
+
                 $body = $response->json('choices.0.message.content');
                 if ($response->successful() && $this->valid($body, $canBrand, $purpose, $post)) {
                     return ['body' => trim($body), 'provider' => 'groq'];
                 }
-                Log::warning('Quick comment AI response unavailable', ['provider' => 'groq', 'status' => $response->status()]);
-            } catch (Throwable) {
-                Log::warning('Quick comment AI connection failed', ['provider' => 'groq']);
+
+                $fallbackReason = $response->successful() ? 'invalid_response' : $this->failureReason($response);
+                Log::warning('Quick comment AI response unavailable', [
+                    'provider' => 'groq',
+                    'status' => $response->status(),
+                    'model' => $model,
+                    'fallback_reason' => $fallbackReason,
+                ]);
+            } catch (Throwable $exception) {
+                $fallbackReason = 'connection_failed';
+                Log::warning('Quick comment AI connection failed', [
+                    'provider' => 'groq',
+                    'exception_type' => $exception::class,
+                ]);
             }
         }
 
@@ -42,9 +55,41 @@ class GenerateCommentSuggestion
             if ($this->valid($body, $canBrand, $purpose, $post)) {
                 return ['body' => $body, 'provider' => 'ollama'];
             }
+
+            $fallbackReason = 'local_ai_unavailable';
         }
 
-        return ['body' => $this->template($post, $canBrand, $purpose), 'provider' => 'template'];
+        return ['body' => $this->template($post, $canBrand, $purpose), 'provider' => 'template', 'fallback_reason' => $fallbackReason];
+    }
+
+    private function requestGroq(string $model, string $instructions, string $post): Response
+    {
+        return Http::withToken(config('services.groq.key'))->acceptJson()->connectTimeout(5)->timeout(20)
+            ->withOptions(['allow_redirects' => false])->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => $model,
+                'temperature' => 0.65,
+                'max_tokens' => 350,
+                'messages' => [
+                    ['role' => 'system', 'content' => $instructions],
+                    ['role' => 'user', 'content' => "Postingan untuk ditanggapi:\n".$post],
+                ],
+            ]);
+    }
+
+    private function isModelUnavailable(Response $response): bool
+    {
+        return in_array($response->status(), [400, 404], true)
+            && preg_match('/model|decommission|not found|does not exist|unavailable/i', (string) $response->json('error.message', '')) === 1;
+    }
+
+    private function failureReason(Response $response): string
+    {
+        return match ($response->status()) {
+            401, 403 => 'invalid_credentials',
+            429 => 'rate_limited',
+            400, 404 => 'model_unavailable',
+            default => $response->serverError() ? 'provider_unavailable' : 'invalid_response',
+        };
     }
 
     private function isServiceRequest(string $post): bool
